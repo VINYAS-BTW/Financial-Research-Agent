@@ -48,9 +48,23 @@ pip install -r requirements.txt
 streamlit run app/main.py
 
 
-### for week3 run the code as it is 
+### for week3 run the code as it is
 
 at line no 15 add the news api key from here  https://newsapi.org/account
 ##  remaining things as it is
 
+
+frontend
+npm install
+npm install axios react-plotly.js plotly.js
+
+
+Terminal 1 - Backend
+cd backend
+uvicorn main:app --reload
+
+
+Terminal 2 - Frontend
+cd frontend
+npm run dev
 
