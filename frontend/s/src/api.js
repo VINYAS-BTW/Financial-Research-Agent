@@ -41,3 +41,39 @@ export async function fetchNewsData(symbol) {
     return [];
   }
 }
+// ✅ Fetch watchlist
+export async function fetchWatchlist(userId = "guest") {
+  try {
+    const res = await axios.get(`${API_BASE}/watchlist/${userId}`);
+    return res.data.items || [];
+  } catch (err) {
+    console.error("⚠️ Fetch Watchlist Error:", err.message);
+    return [];
+  }
+}
+
+// ✅ Add to watchlist
+export async function addToWatchlist(symbol, userId = "guest") {
+  try {
+    const res = await axios.post(`${API_BASE}/watchlist/${userId}/add`, {
+      symbol,
+    });
+    return res.data;
+  } catch (err) {
+    console.error("❌ Add Watchlist Error:", err.message);
+    return null;
+  }
+}
+
+// ✅ Remove from watchlist
+export async function removeFromWatchlist(symbol, userId = "guest") {
+  try {
+    const res = await axios.post(`${API_BASE}/watchlist/${userId}/remove`, {
+      symbol,
+    });
+    return res.data;
+  } catch (err) {
+    console.error("❌ Remove Watchlist Error:", err.message);
+    return null;
+  }
+}

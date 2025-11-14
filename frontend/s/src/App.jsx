@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import StockAnalysis from "../src/components/StockAnalysis";
 import NewsAnalysis from "../src/components/NewsAnalysis";
+import { fetchWatchlist, addToWatchlist, removeFromWatchlist } from "./api";
+
 
 function App() {
   const [symbol1, setSymbol1] = useState("RELIANCE.NS");
@@ -10,7 +12,24 @@ function App() {
   const [trigger, setTrigger] = useState(0);
   const [hasFetched, setHasFetched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [watchlist, setWatchlist] = useState([]);
 
+
+useEffect(() => {
+  async function loadWatchlist() {
+    const wl = await fetchWatchlist("guest");
+    setWatchlist(wl);
+  }
+  loadWatchlist();
+}, []);
+
+const handleAddToWatchlist = async () => {
+  if (!symbol1) return;
+  await addToWatchlist(symbol1, "guest");
+  const wl = await fetchWatchlist("guest");
+  setWatchlist(wl);
+};
+  // ✅ Sanitize and standardize stock symbols
   const normalizeSymbol = (s) => {
     if (!s) return "";
     s = s.trim().toUpperCase();
@@ -24,6 +43,7 @@ function App() {
     return s;
   };
 
+  // ✅ Handle fetch click
   const handleFetch = async () => {
     const s1 = normalizeSymbol(symbol1);
     const s2 = normalizeSymbol(symbol2);
@@ -36,6 +56,7 @@ function App() {
     setIsLoading(true);
     setHasFetched(true);
 
+    // Small delay to simulate smoother loading transitions
     setTimeout(() => {
       setSymbol1(s1);
       setSymbol2(s2);
@@ -50,19 +71,24 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#010101] text-gray-100">
-      
+      {/* --- Background Glow Layers --- */}
       <div className="fixed inset-0 z-0">
-       
         <div className="absolute top-0 left-1/4 w-196 h-96 bg-cyan-800/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/9 right-1/3 w-96 h-96 bg-cyan-900/10 rounded-full blur-3xl " style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1 left-1/3 w-196 h-96 bg-cyan-800/20 rounded-full blur-3xl " style={{animationDelay: '2s'}}></div>
-        
-       
+        <div
+          className="absolute bottom-1/9 right-1/3 w-96 h-96 bg-cyan-900/10 rounded-full blur-3xl"
+          style={{ animationDelay: "1s" }}
+        ></div>
+        <div
+          className="absolute top-1 left-1/3 w-196 h-96 bg-cyan-800/20 rounded-full blur-3xl"
+          style={{ animationDelay: "2s" }}
+        ></div>
+
         <div className="absolute inset-0 bg-[linear-gradient(rgba(111,182,212,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.03)_1px,transparent_1px)] bg-size-[50px_50px]"></div>
-       
+
         <div className="absolute inset-0 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIvPjwvc3ZnPg==')]"></div>
       </div>
 
+      {/* --- Main Content --- */}
       <div className="max-w-7xl mx-auto px-4 py-6 relative z-10">
         {/* Header */}
         <header className="text-center mb-8">
@@ -82,6 +108,7 @@ function App() {
         {/* Controls */}
         <div className="bg-[#] rounded-4xl p-6 mb-6 border border-gray-800 font-semibold">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Stock 1 Input */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2 font-vi2">
                 1st Stock Symbol
@@ -96,6 +123,7 @@ function App() {
               />
             </div>
 
+            {/* Stock 2 Input */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2 font-vi2">
                 2nd Stock Symbol (optional)
@@ -110,6 +138,7 @@ function App() {
               />
             </div>
 
+            {/* Period Select */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2 font-vi2">
                 Time Period
@@ -128,13 +157,14 @@ function App() {
               </select>
             </div>
 
+            {/* Fetch Button */}
             <div className="flex items-end">
               <button
                 onClick={handleFetch}
                 disabled={isLoading}
-                className="w-full bg-linear-to-r from-cyan-200 via-neutral-950 to-cyan-200 border border-gray-100 rounded-3xl hover:from-neutral-850 hover:via-cyan-800 hover:to-neutral-850 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-2.5 px-6  transition-all duration-200 shadow-cyan-300/20 hover:scale-101 cursor-pointer hover:shadow-[2px_4px_0_0_rgba(0,0,0,0.2)]"
+                className="w-full bg-linear-to-r from-cyan-200 via-neutral-950 to-cyan-200 border border-gray-100 rounded-3xl hover:from-neutral-850 hover:via-cyan-800 hover:to-neutral-850 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-2.5 px-6 transition-all duration-200 shadow-cyan-300/20 hover:scale-101 cursor-pointer hover:shadow-[2px_4px_0_0_rgba(0,0,0,0.2)]"
               >
-                {isLoading ? " Gettin' u..." : " Fetch Data"}
+                {isLoading ? " Fetching..." : " Fetch Data"}
               </button>
             </div>
           </div>
@@ -143,7 +173,7 @@ function App() {
         {/* Tabs */}
         <div className="flex gap-3 mb-6">
           <button
-            className={`md:text-lg flex-1 py-3 px-4 rounded-3xl  font-bold font-vi2 transition-all duration-200 ${
+            className={`md:text-lg flex-1 py-3 px-4 rounded-3xl font-bold transition-all duration-200 ${
               activeTab === "technical"
                 ? "bg-linear-to-r from-cyan-800 via-neutral-950 to-cyan-950 border border-gray-700 text-white shadow-lg shadow-blue-500/20"
                 : "bg-[#111] text-gray-400 hover:text-white border border-gray-800 hover:ring-1 hover:border-cyan-50 cursor-pointer hover:shadow-[2px_4px_0_0_rgba(0,0,0,0.2)]"
@@ -155,14 +185,62 @@ function App() {
           <button
             className={`flex-1 py-3 px-4 rounded-3xl font-bold transition-all font-vi2 md:text-lg duration-200 ${
               activeTab === "news"
-                ? "bg-linear-to-r  from-cyan-800 via-neutral-950 to-cyan-950 border border-gray-700 text-white shadow-lg shadow-blue-500/30"
-                : "bg-linear-to-r from-neutral-800 to-neutral-950  border-gray-800 text-gray-400 hover:text-white border cursor-pointer hover:ring-1 hover:border-cyan-50 hover:shadow-[2px_4px_0_0_rgba(0,0,0,0.2)]"
+                ? "bg-linear-to-r from-cyan-800 via-neutral-950 to-cyan-950 border border-gray-700 text-white shadow-lg shadow-blue-500/30"
+                : "bg-linear-to-r from-neutral-800 to-neutral-950 border-gray-800 text-gray-400 hover:text-white border cursor-pointer hover:ring-1 hover:border-cyan-50 hover:shadow-[2px_4px_0_0_rgba(0,0,0,0.2)]"
             }`}
             onClick={() => setActiveTab("news")}
           >
             News & Sentiment
           </button>
         </div>
+       {/* Watchlist Section */}
+<div className="bg-[#0a0a0f] border border-gray-800 rounded-3xl p-4 mb-6">
+  <h2 className="text-xl font-bold text-white mb-3">📈 My Watchlist</h2>
+  <div className="flex flex-wrap gap-2">
+    {watchlist.length > 0 ? (
+      watchlist.map((item, i) => (
+        <div
+          key={i}
+          className="flex items-center bg-neutral-800 border border-gray-700 rounded-full px-3 py-1 text-sm text-gray-300 hover:border-cyan-500 transition"
+        >
+          <span
+            className="cursor-pointer font-semibold"
+            onClick={() => setSymbol1(item.symbol)}
+          >
+            {item.symbol}
+          </span>
+          <button
+            onClick={async () => {
+              await removeFromWatchlist(item.symbol, "guest");
+              const wl = await fetchWatchlist("guest");
+              setWatchlist(wl);
+            }}
+            className="ml-2 text-red-400 hover:text-red-300 font-bold"
+            title="Remove from watchlist"
+          >
+            🗑️
+          </button>
+        </div>
+      ))
+    ) : (
+      <span className="text-gray-400 text-sm">
+        No stocks saved yet. Add one below!
+      </span>
+    )}
+  </div>
+
+  <button
+    onClick={async () => {
+      await addToWatchlist(symbol1, "guest");
+      const wl = await fetchWatchlist("guest");
+      setWatchlist(wl);
+    }}
+    className="mt-3 bg-cyan-900 text-white rounded-2xl px-4 py-2 hover:bg-cyan-700 transition"
+  >
+    ➕ Add {symbol1 || "Current"} to Watchlist
+  </button>
+</div>
+
 
         {/* Content */}
         <div className="bg-[#] rounded-2xl p-6 border border-gray-800 min-h-[400px]">
@@ -182,11 +260,7 @@ function App() {
               trigger={trigger}
             />
           ) : (
-            <NewsAnalysis
-              symbol1={symbol1}
-              symbol2={symbol2}
-              trigger={trigger}
-            />
+            <NewsAnalysis symbol1={symbol1} symbol2={symbol2} trigger={trigger} />
           )}
         </div>
 
@@ -198,7 +272,8 @@ function App() {
             <span>Sentiment: VADER</span>
           </div>
           <p className="text-red-400 text-sm">
-            For educational purposes only. Not financial advice.<br></br>
+            For educational purposes only. Not financial advice.
+            <br />
             <span className="font-bold text-cyan-50">-The Lit Coders</span>
           </p>
         </footer>
@@ -207,4 +282,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

@@ -12,16 +12,39 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
 
   useEffect(() => {
     async function loadNews() {
-      if (!symbol1) return;
-      const n1 = await fetchNewsData(symbol1);
-      setNews1(n1);
+      try {
+        if (!symbol1) return;
+
+        setLoading1(true);
+        setError1(null);
+
+        const n1 = await fetchNewsData(symbol1);
+        setNews1(n1);
+      } catch (err) {
+        console.error("❌ Error fetching news1:", err.message);
+        setError1("Failed to load news for " + symbol1);
+      } finally {
+        setLoading1(false);
+      }
+
       if (symbol2 && symbol2 !== symbol1) {
-        const n2 = await fetchNewsData(symbol2);
-        setNews2(n2);
+        try {
+          setLoading2(true);
+          setError2(null);
+
+          const n2 = await fetchNewsData(symbol2);
+          setNews2(n2);
+        } catch (err) {
+          console.error("❌ Error fetching news2:", err.message);
+          setError2("Failed to load news for " + symbol2);
+        } finally {
+          setLoading2(false);
+        }
       } else {
         setNews2([]);
       }
     }
+
     loadNews();
   }, [symbol1, symbol2, trigger]);
 
@@ -160,12 +183,12 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
             >
               {summary.overall === "Positive" && (
                 <p className="font-semibold">
-                   Positive - Favorable coverage
+                  Positive - Favorable coverage
                 </p>
               )}
               {summary.overall === "Negative" && (
                 <p className="font-semibold">
-                   Negative - Concerning coverage
+                  Negative - Concerning coverage
                 </p>
               )}
               {summary.overall === "Neutral" && (
@@ -177,7 +200,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
 
         {/* Headlines */}
         <div>
-          <h4 className="text-xl font-bold text-white mb-4"> Headlines</h4>
+          <h4 className="text-xl font-bold text-white mb-4">Headlines</h4>
           <div className="space-y-3">
             {news.map((a, i) => (
               <details
@@ -206,7 +229,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 font-medium text-sm transition"
                   >
-                     Read Article
+                    Read Article
                   </a>
                   <p className="text-xs text-gray-400">
                     Score: {(a?.score ?? 0).toFixed(3)} |{" "}

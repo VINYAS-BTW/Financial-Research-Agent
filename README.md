@@ -30,41 +30,25 @@ The goal is to develop a working **financial research assistant** that demonstra
 
 ---
 
-## ⚙️ Execution Steps (Up to Week 2)
 
-### **1️⃣ Clone the Repository**
-```bash
-git clone https://github.com/<your-username>/Financial-Research-Agent.git
-cd Financial-Research-Agent
-
-### **2️⃣ Create and Activate a Virtual Environment**
-python -m venv venv
-venv\Scripts\activate
-
-### **3️⃣ Install Required Libraries**
-pip install -r requirements.txt
-
-### **4️⃣ Run the Application Locally**
-streamlit run app/main.py
-
-
-### for week3 run the code as it is
-
-at line no 15 add the news api key from here  https://newsapi.org/account
-##  remaining things as it is
-
-
-frontend
-npm install
-npm install axios react-plotly.js plotly.js
-
-
-Terminal 1 - Backend
+for execution 
+terminal 1
 cd backend
-uvicorn main:app --reload
+pip install -r requirements.txt
+uvicorn app.main:app --reload or python -m uvicorn app.main:app --reload
 
 
-Terminal 2 - Frontend
-cd frontend
+for frontend 
+terminal 2
+cd frontend 
+cd s
+npm i
 npm run dev
 
+create a .env file in backend
+
+NEWS_API_KEY=your api key
+# backend/.env.example
+MONGO_URI=mongodb+srv://username:password@agenticai.vpefmoj.mongodb.net/?appName=AgenticAi
+MONGO_DB_NAME=financial
+REDIS_URL=redis://redis:6379/0

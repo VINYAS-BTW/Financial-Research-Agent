@@ -5,26 +5,50 @@ import { fetchStockData } from "../api";
 function StockAnalysis({ symbol1, symbol2, period, trigger }) {
   const [data1, setData1] = useState(null);
   const [data2, setData2] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading1, setLoading1] = useState(false);
+  const [loading2, setLoading2] = useState(false);
   const [error1, setError1] = useState(null);
   const [error2, setError2] = useState(null);
 
   useEffect(() => {
     async function loadData() {
       if (!symbol1) return;
-      const d1 = await fetchStockData(symbol1, period);
-      setData1(d1);
+
+      // Load stock 1
+      try {
+        setLoading1(true);
+        setError1(null);
+        const d1 = await fetchStockData(symbol1, period);
+        setData1(d1);
+      } catch (err) {
+        console.error("❌ Error loading stock1:", err.message);
+        setError1("Failed to fetch data for " + symbol1);
+      } finally {
+        setLoading1(false);
+      }
+
+      // Load stock 2 (if provided)
       if (symbol2 && symbol2 !== symbol1) {
-        const d2 = await fetchStockData(symbol2, period);
-        setData2(d2);
+        try {
+          setLoading2(true);
+          setError2(null);
+          const d2 = await fetchStockData(symbol2, period);
+          setData2(d2);
+        } catch (err) {
+          console.error("❌ Error loading stock2:", err.message);
+          setError2("Failed to fetch data for " + symbol2);
+        } finally {
+          setLoading2(false);
+        }
       } else {
         setData2(null);
       }
     }
+
     loadData();
   }, [symbol1, symbol2, period, trigger]);
 
-  const renderStockSection = (data, error, symbol) => {
+  const renderStockSection = (data, error, loading, symbol) => {
     if (loading) {
       return (
         <div className="flex items-center justify-center h-64 text-gray-400">
@@ -223,7 +247,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
     return (
       <div className="mt-8 pt-8 border-t border-gray-800">
         <h3 className="text-3xl font-bold text-white mb-6">
-           Comparison Chart
+          Comparison Chart
         </h3>
         <div className="bg-[#0a0a0f] border border-gray-800 rounded-xl p-4">
           <Plot
@@ -281,15 +305,15 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
   return (
     <div>
       <h2 className="text-3xl font-bold bg-linear-to-r from-neutral-100 via-cyan-100 to-neutral-100 bg-clip-text text-transparent mb-6">
-         Stock Price & Technical Indicators
+        Stock Price & Technical Indicators
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>{renderStockSection(data1, error1, symbol1)}</div>
+        <div>{renderStockSection(data1, error1, loading1, symbol1)}</div>
 
         <div>
           {symbol2 && symbol2 !== symbol1 ? (
-            renderStockSection(data2, error2, symbol2)
+            renderStockSection(data2, error2, loading2, symbol2)
           ) : (
             <div className="flex items-center justify-center h-full bg-[#0a0a0f] border border-gray-800 rounded-xl text-gray-400">
               Enter a second stock symbol above for comparison
