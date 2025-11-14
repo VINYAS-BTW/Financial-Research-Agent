@@ -2,6 +2,7 @@ import { useState,useEffect } from "react";
 import StockAnalysis from "../src/components/StockAnalysis";
 import NewsAnalysis from "../src/components/NewsAnalysis";
 import { fetchWatchlist, addToWatchlist, removeFromWatchlist } from "./api";
+import DotGrid from "./components/DotGrid";
 
 
 function App() {
@@ -72,6 +73,8 @@ const handleAddToWatchlist = async () => {
   return (
     <div className="min-h-screen bg-[#010101] text-gray-100">
       {/* --- Background Glow Layers --- */}
+
+     
       <div className="fixed inset-0 z-0">
         <div className="absolute top-0 left-1/4 w-196 h-96 bg-cyan-800/10 rounded-full blur-3xl animate-pulse"></div>
         <div
@@ -91,6 +94,7 @@ const handleAddToWatchlist = async () => {
       {/* --- Main Content --- */}
       <div className="max-w-7xl mx-auto px-4 py-6 relative z-10">
         {/* Header */}
+        
         <header className="text-center mb-8">
           <h1 className="text-3xl px-2 md:text-6xl  bg-linear-to-r from-neutral-100 via-cyan-2 00 to-neutral-400 bg-clip-text text-transparent mb-8 mt-3 font-vi tracking-wider font-bold">
             Financial Research AI Agent
@@ -195,7 +199,7 @@ const handleAddToWatchlist = async () => {
         </div>
        {/* Watchlist Section */}
 <div className="bg-[#0a0a0f] border border-gray-800 rounded-3xl p-4 mb-6">
-  <h2 className="text-xl font-bold text-white mb-3">📈 My Watchlist</h2>
+  <h2 className="text-xl font-bold text-white mb-3 font-vi2"> My Watchlist</h2>
   <div className="flex flex-wrap gap-2">
     {watchlist.length > 0 ? (
       watchlist.map((item, i) => (
@@ -237,7 +241,7 @@ const handleAddToWatchlist = async () => {
     }}
     className="mt-3 bg-cyan-900 text-white rounded-2xl px-4 py-2 hover:bg-cyan-700 transition"
   >
-    ➕ Add {symbol1 || "Current"} to Watchlist
+    + Add {symbol1 || "Current"} to Watchlist
   </button>
 </div>
 
