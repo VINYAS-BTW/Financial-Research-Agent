@@ -1,12 +1,10 @@
-# backend/app/models/watchlist_model.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
 
 class WatchlistItem(BaseModel):
     symbol: str
-    notes: Optional[str] = None
     added_at: Optional[datetime] = None
 
 

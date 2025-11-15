@@ -1,9 +1,16 @@
 # backend/app/tests/test_watchlist.py
 import pytest
-from ..models.watchlist_model import Watchlist, WatchlistItem
 from datetime import datetime
+from ..models.watchlist_model import WatchlistItem
 
-def test_watchlist_model():
-    w = Watchlist(user_id="u1", items=[WatchlistItem(symbol="AAPL", notes="test", added_at=datetime.utcnow())])
-    assert w.user_id == "u1"
-    assert len(w.items) == 1
+
+def test_watchlist_item_model():
+    item = WatchlistItem(
+        user_id="u1",
+        symbol="AAPL",
+        created_at=datetime.utcnow()
+    )
+
+    assert item.user_id == "u1"
+    assert item.symbol == "AAPL"
+    assert isinstance(item.created_at, datetime)

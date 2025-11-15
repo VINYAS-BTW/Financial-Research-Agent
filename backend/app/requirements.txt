@@ -4,6 +4,7 @@ uvicorn[standard]
 
 # ---------------- DATA & FINANCE ----------------
 pandas
+numpy
 yfinance
 requests
 vaderSentiment
@@ -19,7 +20,7 @@ pydantic-settings
 
 # ---------------- DATABASE ----------------
 motor
-
+pymongo
 # ---------------- CACHE ----------------
 redis
 

@@ -1,5 +1,5 @@
 # backend/app/models/stock_model.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
@@ -22,4 +22,4 @@ class IndicatorResult(BaseModel):
     symbol: str
     indicator: str
     period: int
-    values: List[float]
+    values: List[Optional[float]]   # ✔ allow None for early RSI values

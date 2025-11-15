@@ -1,2 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Vend+Sans:ital,wght@0,300..700;1,300..700&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
+
+@font-face {
+  font-family:"Vend Sans", "sans-serif" ,"Work Sans", sans-serif;
+  src: url('https://fonts.googleapis.com/css2?family=Vend+Sans:ital,wght@0,300..700;1,300..700&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+} 
+@theme{
+  --font-vi:"Vend Sans", "sans-serif";
+  --font-vi2:"Work Sans", "sans-serif";
+}

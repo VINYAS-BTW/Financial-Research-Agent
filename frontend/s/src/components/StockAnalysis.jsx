@@ -168,7 +168,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
         </div>
 
         {/* RSI Chart */}
-        <div className="bg-[#0a0a0f] border border-gray-800 rounded-4xl p-4">
+        <div className="bg-[#0a0a0f] border border-gray-800 rounded-4xl p-4 font-vi2">
           <Plot
             data={[
               {

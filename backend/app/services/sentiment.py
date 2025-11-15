@@ -1,20 +1,38 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from typing import List, Dict, Any
 
 analyzer = SentimentIntensityAnalyzer()
 
-def analyze_sentiment_batch(articles):
+
+def analyze_sentiment_batch(articles: List[Dict[str, Any]]):
+    """
+    Analyze sentiment for each article using VADER.
+    Does NOT modify the original list.
+    """
     results = []
+
     for article in articles:
-        title = article.get("title", "")
-        desc = article.get("description", "")
-        text = f"{title}. {desc}"
+        if not isinstance(article, dict):
+            continue  # safety fallback
+
+        title = article.get("title", "") or ""
+        desc = article.get("description", "") or ""
+
+        text = f"{title}. {desc}".strip()
+
         score = analyzer.polarity_scores(text)["compound"]
+
         sentiment = (
             "Positive" if score >= 0.05 else
             "Negative" if score <= -0.05 else
             "Neutral"
         )
-        article["sentiment"] = sentiment
-        article["score"] = score
-        results.append(article)
+
+        # create a new dict to avoid mutating original input
+        updated_article = {**article}
+        updated_article["sentiment"] = sentiment
+        updated_article["score"] = score
+
+        results.append(updated_article)
+
     return results

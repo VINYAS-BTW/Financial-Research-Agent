@@ -1,6 +1,8 @@
 import requests
+import asyncio
 
-def fetch_financial_news(symbol, api_key):
+
+async def fetch_financial_news(symbol, api_key):
     if not api_key:
         return None, "API key missing"
 
@@ -13,11 +15,16 @@ def fetch_financial_news(symbol, api_key):
         "pageSize": 10,
         "apiKey": api_key
     }
+
     try:
-        res = requests.get(url, params=params, timeout=15)
+        # Run requests.get() in a thread so main loop stays async
+        res = await asyncio.to_thread(requests.get, url, params=params, timeout=15)
+
         if res.status_code != 200:
             return None, res.json().get("message", "API error")
+
         data = res.json().get("articles", [])
         return data, None
+
     except Exception as e:
         return None, str(e)
