@@ -2,7 +2,7 @@
 Agent Routes - FastAPI endpoints for LangGraph workflows
 Place this in: backend/app/routes/agent_routes.py
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 from pydantic import BaseModel
 
