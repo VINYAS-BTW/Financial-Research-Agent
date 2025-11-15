@@ -1,10 +1,17 @@
+# backend/app/services/stocks.py
+
 import yfinance as yf
 import pandas as pd
 import re
+import asyncio
+from typing import Dict, Any, List
+from app.config import settings
 
-async def fetch_stock_data(symbol, time_period):
+
+
+async def fetch_stock_data(symbol: str, time_period: str):
     try:
-        # --- INPUT SANITIZATION (unchanged) ---
+        # --- INPUT SANITIZATION ---
         symbol = symbol.strip().upper()
         symbol = re.sub(r'\.+', '.', symbol)
         symbol = re.sub(r'[^A-Z0-9.]', '', symbol)
@@ -17,38 +24,42 @@ async def fetch_stock_data(symbol, time_period):
 
         print(f"📊 Fetching data for {symbol} ({time_period})...")
 
-        # --- FETCH USING YFINANCE IN BACKGROUND THREAD ---
-        data = await asyncio.to_thread(
-            yf.download,
-            symbol,
-            period=time_period,
-            progress=False,
-            threads=False,
-            timeout=10
-        )
+        # --- FETCH USING YFINANCE ASYNC THREAD ---
+        def _download_stock():
+            return yf.download(
+                symbol,
+                period=time_period,
+                progress=False,
+                threads=False,
+                timeout=10,
+                auto_adjust=False  # Explicitly set to avoid deprecation warning
+            )
+        data = await asyncio.to_thread(_download_stock)
 
-        # --- FALLBACK TO BSE ---
+        # Fallback to BSE
         if data.empty and symbol.endswith(".NS"):
             alt_symbol = symbol.replace(".NS", ".BO")
             print(f"⚠️ NSE failed, trying {alt_symbol}")
 
-            data = await asyncio.to_thread(
-                yf.download,
-                alt_symbol,
-                period=time_period,
-                progress=False,
-                threads=False,
-                timeout=10
-            )
+            def _download_alt():
+                return yf.download(
+                    alt_symbol,
+                    period=time_period,
+                    progress=False,
+                    threads=False,
+                    timeout=10,
+                    auto_adjust=False  # Explicitly set to avoid deprecation warning
+                )
+            data = await asyncio.to_thread(_download_alt)
 
         if data.empty:
             return None, f"No data found for {symbol.replace('.NS', '').replace('.BO', '')}"
 
-        # --- FIX MULTIINDEX ---
+        # Flatten MultiIndex
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
 
-        # --- FIX MISSING CLOSE ---
+        # Fix missing close
         if "Close" not in data.columns:
             if "Adj Close" in data.columns:
                 data["Close"] = data["Adj Close"]
@@ -59,7 +70,7 @@ async def fetch_stock_data(symbol, time_period):
         if data.empty:
             return None, f"No valid close data for {symbol}"
 
-        # --- MA20 + RSI (unchanged) ---
+        # --- MA20 + RSI ---
         data["MA20"] = data["Close"].rolling(window=20).mean()
 
         delta = data["Close"].diff()
@@ -70,21 +81,24 @@ async def fetch_stock_data(symbol, time_period):
         rs = avg_gain / avg_loss
         data["RSI"] = 100 - (100 / (1 + rs))
 
-        # --- FINAL FORMAT ---
+        # Format output
         data = data.reset_index()
         data = data[["Date", "Close", "MA20", "RSI"]].dropna()
 
         if data.empty:
             return None, f"No valid data points for {symbol}"
 
-        # --- METRICS (unchanged) ---
+        # Metrics
         latest = data.iloc[-1]
         prev = data.iloc[-2] if len(data) > 1 else latest
 
         price_change = latest["Close"] - prev["Close"]
         pct_change = (price_change / prev["Close"] * 100) if prev["Close"] != 0 else 0
-        period_return = ((latest["Close"] - data.iloc[0]["Close"]) /
-                         data.iloc[0]["Close"]) * 100
+
+        period_return = (
+            (latest["Close"] - data.iloc[0]["Close"]) /
+            data.iloc[0]["Close"]
+        ) * 100
 
         metrics = {
             "latest_price": round(latest["Close"], 2),
@@ -110,28 +124,20 @@ async def fetch_stock_data(symbol, time_period):
 
 async def get_stock_data(ticker: str) -> Dict[str, Any]:
     """
-    Async wrapper for fetching current stock data
-    Used by agent nodes
-    Returns current price and basic info
+    Async wrapper for fetching current stock data.
     """
-    loop = asyncio.get_event_loop()
-    result, error = await loop.run_in_executor(
-        None,
-        fetch_stock_data,
-        ticker,
-        "1d"  # Get 1 day of data for current price
-    )
-    
+    # DIRECT async call — no executor needed
+    result, error = await fetch_stock_data(ticker, "1d")
+
     if error:
         return {"error": error}
-    
+
     if not result:
         return {"error": "No data returned"}
-    
-    # Extract current price from the latest data point
+
     data = result.get("data", [])
     metrics = result.get("metrics", {})
-    
+
     if data:
         latest = data[-1]
         return {
@@ -139,7 +145,7 @@ async def get_stock_data(ticker: str) -> Dict[str, Any]:
             "symbol": ticker,
             "metrics": metrics
         }
-    
+
     return {
         "price": metrics.get("latest_price", 0),
         "symbol": ticker,
@@ -149,10 +155,8 @@ async def get_stock_data(ticker: str) -> Dict[str, Any]:
 
 async def get_historical_data(ticker: str, period: str = "3mo") -> List[Dict[str, Any]]:
     """
-    Async wrapper for fetching historical stock data
-    Used by agent nodes for technical analysis
+    Async wrapper for fetching historical data.
     """
-    # Map period strings to yfinance periods
     period_map = {
         "1mo": "1mo",
         "3mo": "3mo",
@@ -161,23 +165,15 @@ async def get_historical_data(ticker: str, period: str = "3mo") -> List[Dict[str
         "2y": "2y",
         "5y": "5y"
     }
-    
+
     time_period = period_map.get(period, "3mo")
-    
-    loop = asyncio.get_event_loop()
-    result, error = await loop.run_in_executor(
-        None,
-        fetch_stock_data,
-        ticker,
-        time_period
-    )
-    
+
+    result, error = await fetch_stock_data(ticker, time_period)
+
     if error:
         return []
-    
+
     if not result:
         return []
-    
-    # Return the historical data points
-    data = result.get("data", [])
-    return data or []
+
+    return result.get("data", []) or []

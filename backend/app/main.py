@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from .services.stocks import fetch_stock_data
-from .services.news import fetch_financial_news
+from .services.news import get_news_for_ticker   # ✅ Correct import
 from .services.sentiment import analyze_sentiment_batch
 from .routes import stock_routes, news_routes, watchlist_routes, agent_routes
 from .db import init_db
 from .utils.cache import close_redis
 
 import os
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
 load_dotenv()
 
@@ -35,7 +36,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # ---------------- STOCK ROUTE ----------------
 @app.get("/api/stock-data")
 async def get_stock_data(symbol: str, period: str = "3mo"):
-    data, error = await fetch_stock_data(symbol, period)   # ✅ FIX: added await
+    data, error = await fetch_stock_data(symbol, period)
     if error:
         return {"success": False, "error": error}
 
@@ -49,11 +50,24 @@ async def get_stock_data(symbol: str, period: str = "3mo"):
 # ---------------- NEWS ROUTE ----------------
 @app.get("/api/news")
 async def get_news(symbol: str):
-    articles, error = await fetch_financial_news(symbol, NEWS_API_KEY)   # ✅ FIX
-    if error:
-        return {"success": False, "error": error}
+    # ✅ Use correct async news fetcher
+    articles = await get_news_for_ticker(symbol)
 
-    analyzed = analyze_sentiment_batch(articles or [])
+    # If empty or failed
+    if not articles:
+        return {
+            "success": True,
+            "articles": [],
+            "sentiment_summary": {
+                "avg_score": 0,
+                "positive_count": 0,
+                "neutral_count": 0,
+                "negative_count": 0,
+                "overall": "Neutral",
+            },
+        }
+
+    analyzed = analyze_sentiment_batch(articles)
 
     if not analyzed:
         return {

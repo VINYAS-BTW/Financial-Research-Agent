@@ -6,10 +6,17 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 from pydantic import BaseModel
 
-# Correct imports (MATCH your actual graph functions)
+# LangGraph workflows
 from app.agents.graphs.research_graph import run_research_analysis
-from app.agents.graphs.sentiment_graph import run_sentiment_analysis, analyze_ticker_sentiment
+from app.agents.graphs.sentiment_graph import (
+    run_sentiment_analysis,
+    analyze_ticker_sentiment,
+)
 from app.agents.graphs.portfolio_graph import run_portfolio_analysis
+
+# LLM node
+from app.agents.nodes.llm_node import run_llm_node
+
 
 
 router = APIRouter(prefix="/agents", tags=["AI Agents"])
@@ -168,6 +175,43 @@ async def get_portfolio_analysis(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------- LLM ROUTE (Gemini + Groq) ----------------------------
+class LLMRequest(BaseModel):
+    model: str
+    prompt: str
+
+
+@router.post("/llm")
+async def llm_handler(request: LLMRequest):
+    """
+    Unified LLM endpoint for Gemini-Pro / Groq Llama3
+    """
+    try:
+        response = await run_llm_node(model=request.model, prompt=request.prompt)
+
+        # Check if response is an error
+        if response and str(response).startswith("[LLM_ERROR]"):
+            error_msg = str(response).replace("[LLM_ERROR] ", "")
+            return {
+                "success": False,
+                "model": request.model,
+                "error": error_msg,
+                "message": "LLM service unavailable. Please configure API keys (GROQ_API_KEY or GEMINI_API_KEY) in your .env file."
+            }
+
+        return {
+            "success": True,
+            "model": request.model,
+            "response": response
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 @router.get("/health")
 async def agent_health_check():
     return {
@@ -175,6 +219,7 @@ async def agent_health_check():
         "agents": {
             "research": "available",
             "sentiment": "available",
-            "portfolio": "available"
+            "portfolio": "available",
+            "llm": "available"
         }
     }

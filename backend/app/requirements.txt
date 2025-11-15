@@ -36,6 +36,10 @@ langchain>=0.1.6
 langchain-core>=0.1.23
 langchain-community>=0.0.20
 
+# ---------------- LLM PROVIDERS ----------------
+groq>=0.4.0
+google-generativeai>=0.3.0
+
 # ---------------- ADDITIONAL DEPENDENCIES ----------------
 # These are often needed but may not be explicit
 typing-extensions>=4.8.0

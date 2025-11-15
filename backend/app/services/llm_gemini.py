@@ -1,28 +1,31 @@
-# app/services/llm_gemini.py
+# backend/app/services/llm_gemini.py
+
 import os
-import httpx
+import aiohttp
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-pro"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
 
 
-async def query_gemini(prompt: str):
+async def query_gemini(prompt: str) -> str:
+    """
+    Calls Gemini Pro LLM.
+    """
     if not GEMINI_API_KEY:
-        return "Gemini API key missing."
+        return "Gemini API key not found."
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-
+    headers = {"Content-Type": "application/json"}
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
+        "contents": [
+            {"parts": [{"text": prompt}]}
+        ]
     }
 
-    params = {"key": GEMINI_API_KEY}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(GEMINI_URL, json=payload, headers=headers) as res:
+            data = await res.json()
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.post(url, params=params, json=payload)
-        data = r.json()
-
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return str(data)
+            try:
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+            except:
+                return f"Gemini API Error: {data}"
