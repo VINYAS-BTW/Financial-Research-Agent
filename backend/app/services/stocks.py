@@ -1,8 +1,6 @@
 import yfinance as yf
 import pandas as pd
 import re
-import asyncio
-
 
 async def fetch_stock_data(symbol, time_period):
     try:
@@ -108,3 +106,78 @@ async def fetch_stock_data(symbol, time_period):
         import traceback
         traceback.print_exc()
         return None, f"Exception in fetch_stock_data: {str(e)}"
+
+
+async def get_stock_data(ticker: str) -> Dict[str, Any]:
+    """
+    Async wrapper for fetching current stock data
+    Used by agent nodes
+    Returns current price and basic info
+    """
+    loop = asyncio.get_event_loop()
+    result, error = await loop.run_in_executor(
+        None,
+        fetch_stock_data,
+        ticker,
+        "1d"  # Get 1 day of data for current price
+    )
+    
+    if error:
+        return {"error": error}
+    
+    if not result:
+        return {"error": "No data returned"}
+    
+    # Extract current price from the latest data point
+    data = result.get("data", [])
+    metrics = result.get("metrics", {})
+    
+    if data:
+        latest = data[-1]
+        return {
+            "price": latest.get("Close", metrics.get("latest_price", 0)),
+            "symbol": ticker,
+            "metrics": metrics
+        }
+    
+    return {
+        "price": metrics.get("latest_price", 0),
+        "symbol": ticker,
+        "metrics": metrics
+    }
+
+
+async def get_historical_data(ticker: str, period: str = "3mo") -> List[Dict[str, Any]]:
+    """
+    Async wrapper for fetching historical stock data
+    Used by agent nodes for technical analysis
+    """
+    # Map period strings to yfinance periods
+    period_map = {
+        "1mo": "1mo",
+        "3mo": "3mo",
+        "6mo": "6mo",
+        "1y": "1y",
+        "2y": "2y",
+        "5y": "5y"
+    }
+    
+    time_period = period_map.get(period, "3mo")
+    
+    loop = asyncio.get_event_loop()
+    result, error = await loop.run_in_executor(
+        None,
+        fetch_stock_data,
+        ticker,
+        time_period
+    )
+    
+    if error:
+        return []
+    
+    if not result:
+        return []
+    
+    # Return the historical data points
+    data = result.get("data", [])
+    return data or []

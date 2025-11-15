@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from .services.stocks import fetch_stock_data
 from .services.news import fetch_financial_news
 from .services.sentiment import analyze_sentiment_batch
-from .routes import stock_routes, news_routes, watchlist_routes
+from .routes import stock_routes, news_routes, watchlist_routes, agent_routes
 from .db import init_db
 from .utils.cache import close_redis
 
@@ -26,6 +26,10 @@ app.add_middleware(
 )
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+
+# ⭐ Added LLM API keys (Gemini + Groq)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 
 # ---------------- STOCK ROUTE ----------------
@@ -89,6 +93,7 @@ async def get_news(symbol: str):
 app.include_router(stock_routes.router, prefix="/api")
 app.include_router(news_routes.router, prefix="/api")
 app.include_router(watchlist_routes.router, prefix="/api")
+app.include_router(agent_routes.router, prefix="/api")  # AI Agent routes
 
 
 # ---------------- STARTUP & SHUTDOWN ----------------
