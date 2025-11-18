@@ -14,21 +14,28 @@ router = APIRouter(prefix="/news", tags=["news"])
 async def get_news(symbol: str, limit: int = Query(10, ge=1, le=50)):
     """
     Fetch recent news for a ticker or keyword.
-    Uses an external news API if NEWS_API_KEY provided. Otherwise returns empty result.
+    Uses an external news API if NEWS_API_KEY provided.
     """
     cache_key = f"news:{symbol}:{limit}"
     cached = await get_cached(cache_key)
     if cached:
         return cached
 
+    # If API key missing → return empty but in correct response format
     if not settings.NEWS_API_KEY:
-        # return empty when no key (so frontend can still work)
-        result = {"symbol": symbol, "articles": []}
-        await set_cached(cache_key, result, expire=60)
-        return result
+        out = {"query": symbol, "articles": []}
+        await set_cached(cache_key, out, expire=60)
+        return out
 
     url = "https://newsapi.org/v2/everything"
-    params = {"q": symbol, "pageSize": limit, "apiKey": settings.NEWS_API_KEY, "sortBy": "publishedAt", "language": "en"}
+    params = {
+        "q": symbol,
+        "pageSize": limit,
+        "apiKey": settings.NEWS_API_KEY,
+        "sortBy": "publishedAt",
+        "language": "en"
+    }
+
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(url, params=params)
         if resp.status_code != 200:
@@ -37,11 +44,12 @@ async def get_news(symbol: str, limit: int = Query(10, ge=1, le=50)):
 
     articles = []
     for a in j.get("articles", []):
-        published_at = a.get("publishedAt")
+        published_at = a.get("publishedAt", "")
         try:
             published_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
         except Exception:
             published_dt = datetime.utcnow()
+
         na = NewsArticle(
             title=a.get("title"),
             description=a.get("description"),
@@ -51,6 +59,8 @@ async def get_news(symbol: str, limit: int = Query(10, ge=1, le=50)):
         )
         articles.append(na.dict())
 
-    out = {"symbol": symbol, "articles": articles}
+    # ✔ FIX: Return format must match NewsResponse
+    out = {"query": symbol, "articles": articles}
+
     await set_cached(cache_key, out, expire=120)
     return out

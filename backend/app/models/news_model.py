@@ -1,5 +1,4 @@
-# backend/app/models/news_model.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
@@ -15,5 +14,5 @@ class NewsArticle(BaseModel):
 
 
 class NewsResponse(BaseModel):
-    symbol: Optional[str]
+    query: str                   # ✔ must match what news_routes returns
     articles: List[NewsArticle]

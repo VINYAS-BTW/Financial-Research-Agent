@@ -3,20 +3,35 @@ from pydantic import Field, ConfigDict
 
 
 class Settings(BaseSettings):
-    # ✅ MongoDB Atlas connection (fallback to localhost)
+    # MongoDB configuration
     MONGO_URI: str = Field(
-        "mongodb://localhost:27017/financial", env="MONGO_URI"
+        default="mongodb://localhost:27017/financial",
+        env="MONGO_URI"
     )
-    MONGO_DB_NAME: str = Field("financial", env="MONGO_DB_NAME")
+    MONGO_DB_NAME: str = Field(
+        default="financial",
+        env="MONGO_DB_NAME"
+    )
 
-    # ✅ Redis (optional — safe default for local testing)
-    REDIS_URL: str = Field("redis://localhost:6379/0", env="REDIS_URL")
+    # Redis configuration
+    REDIS_URL: str = Field(
+        default="redis://localhost:6379/0",
+        env="REDIS_URL"
+    )
 
-    # ✅ APIs and general app settings
-    NEWS_API_KEY: str = Field("", env="NEWS_API_KEY")
-    YFINANCE_ENABLED: bool = Field(True, env="YFINANCE_ENABLED")
+    # External API keys
+    NEWS_API_KEY: str = Field(default="", env="NEWS_API_KEY")
+
+    # ⭐ Added LLM API Keys (Groq + Gemini)
+    GROQ_API_KEY: str = Field(default="", env="GROQ_API_KEY")
+    GEMINI_API_KEY: str = Field(default="", env="GEMINI_API_KEY")
+
+    # Feature toggles
+    YFINANCE_ENABLED: bool = Field(default=True, env="YFINANCE_ENABLED")
+
+    # General configuration
     APP_NAME: str = "Financial Research Agent"
-    ENV: str = Field("dev", env="ENV")
+    ENV: str = Field(default="dev", env="ENV")
 
     # Optional LangChain tracing settings (for debugging/monitoring)
     langchain_tracing_v2: str = Field(default="", env="LANGCHAIN_TRACING_V2")
@@ -30,5 +45,5 @@ class Settings(BaseSettings):
     )
 
 
-# ✅ Instantiate global settings
+# Global settings instance
 settings = Settings()

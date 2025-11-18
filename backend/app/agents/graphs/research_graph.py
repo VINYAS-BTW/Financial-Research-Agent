@@ -1,7 +1,10 @@
+# backend/app/agents/graphs/research_graph.py
+
 """
 Research Graph - Multi-step AI workflow for comprehensive stock research
 Orchestrates: data fetching -> sentiment analysis -> technical indicators -> research summary
 """
+
 from typing import Dict, Any, Optional
 from langgraph.graph import StateGraph, END  # type: ignore
 from datetime import datetime
@@ -11,11 +14,11 @@ from app.agents.state.agent_state import ResearchState
 from app.agents.nodes.fetch_node import fetch_research_data
 from app.agents.nodes.sentiment_node import analyze_research_sentiment
 from app.agents.nodes.indicator_node import calculate_research_indicators
-from app.agents.utils.agent_utils import (
+from app.utils.agent_utils import (
     create_research_summary,
     generate_recommendations,
     calculate_risk_score,
-    log_state_transition
+    log_state_transition,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,28 +26,26 @@ logger = logging.getLogger(__name__)
 
 async def synthesis_node(state: ResearchState) -> ResearchState:
     """
-    Final synthesis node - combines all analysis into actionable insights
+    Final synthesis node - combines all analysis into actionable insights.
+    Uses LLM combo mode for summary and recommendations.
     """
-    logger.info(f"Synthesizing research for {state['ticker']}")
-    
+    ticker = state.get("ticker", "UNKNOWN")
+    logger.info(f"Synthesizing research for {ticker}")
+
     try:
-        # Generate comprehensive summary
-        state["research_summary"] = create_research_summary(state)
-        
-        # Generate recommendations
-        state["recommendations"] = generate_recommendations(state)
-        
-        # Calculate risk score
+        summary = await create_research_summary(state)
+        recos = await generate_recommendations(state)
         risk_score = calculate_risk_score(state)
-        
-        # Add metadata
-        if "indicators" not in state:
+
+        state["research_summary"] = summary
+        state["recommendations"] = recos
+        if state.get("indicators") is None:
             state["indicators"] = {}
         state["indicators"]["risk_score"] = risk_score
-        
-        logger.info(f"Research synthesis complete for {state['ticker']}")
+
+        logger.info(f"Research synthesis complete for {ticker} (risk_score={risk_score})")
         return state
-        
+
     except Exception as e:
         logger.error(f"Error in synthesis: {str(e)}")
         state["error"] = f"Synthesis error: {str(e)}"
@@ -53,107 +54,93 @@ async def synthesis_node(state: ResearchState) -> ResearchState:
 
 def should_continue_after_fetch(state: ResearchState) -> str:
     """
-    Conditional edge after fetch node
+    Conditional edge after fetch node.
     """
     if state.get("error"):
         logger.warning("Error in fetch, skipping to synthesis")
         return "synthesis"
-    
+
     if not state.get("news_data") and not state.get("stock_data"):
         logger.warning("No data fetched, ending early")
         return END
-    
+
     return "sentiment"
 
 
 def should_continue_after_sentiment(state: ResearchState) -> str:
     """
-    Conditional edge after sentiment node
+    Conditional edge after sentiment node.
     """
-    if state.get("error"):
-        # Continue anyway, we can still do technical analysis
-        logger.warning("Error in sentiment, continuing to indicators")
-    
+    err = state.get("error")
+    if err is None:
+            state.pop("error", None)  # remove phantom error
     return "indicators"
+
 
 
 def should_continue_after_indicators(state: ResearchState) -> str:
     """
-    Conditional edge after indicators node
+    Conditional edge after indicators node.
     """
-    # Always continue to synthesis
     return "synthesis"
 
 
-# Build the research graph
 def create_research_graph() -> Any:
     """
-    Create the research workflow graph
-    
+    Create the research workflow graph.
+
     Flow:
     START -> fetch_data -> sentiment_analysis -> technical_indicators -> synthesis -> END
     """
     workflow = StateGraph(ResearchState)
-    
-    # Add nodes
+
     workflow.add_node("fetch", fetch_research_data)
     workflow.add_node("sentiment", analyze_research_sentiment)
     workflow.add_node("indicators", calculate_research_indicators)
     workflow.add_node("synthesis", synthesis_node)
-    
-    # Add edges
+
     workflow.set_entry_point("fetch")
-    
-    # Conditional routing after each node
+
     workflow.add_conditional_edges(
         "fetch",
         should_continue_after_fetch,
         {
             "sentiment": "sentiment",
             "synthesis": "synthesis",
-            END: END
-        }
+            END: END,
+        },
     )
-    
+
     workflow.add_conditional_edges(
         "sentiment",
         should_continue_after_sentiment,
         {
-            "indicators": "indicators"
-        }
+            "indicators": "indicators",
+        },
     )
-    
+
     workflow.add_conditional_edges(
         "indicators",
         should_continue_after_indicators,
         {
-            "synthesis": "synthesis"
-        }
+            "synthesis": "synthesis",
+        },
     )
-    
+
     workflow.add_edge("synthesis", END)
-    
+
     return workflow.compile()
 
 
-# Initialize the compiled graph
 research_graph = create_research_graph()
 
 
 async def run_research_analysis(ticker: str, query: Optional[str] = None) -> Dict[str, Any]:
     """
-    Execute the research workflow for a given ticker
-    
-    Args:
-        ticker: Stock ticker symbol
-        query: Optional specific research query
-    
-    Returns:
-        Complete research analysis results
+    Execute the research workflow for a given ticker.
     """
     logger.info(f"Starting research analysis for {ticker}")
-    
-    # Initialize state
+
     initial_state: ResearchState = {
         "ticker": ticker,
         "query": query,
@@ -165,34 +152,60 @@ async def run_research_analysis(ticker: str, query: Optional[str] = None) -> Dic
         "research_summary": None,
         "recommendations": None,
         "error": None,
-        "timestamp": datetime.now()
+        "timestamp": datetime.now(),
     }
-    
+
     try:
-        # Run the graph
         final_state = await research_graph.ainvoke(initial_state)
-        
-        logger.info(f"Research analysis complete for {ticker}")
-        
-        # Format output
+
+        if final_state.get("error"):
+            logger.error(f"Error in state for {ticker}: {final_state['error']}")
+        else:
+            logger.info(f"Research analysis complete for {ticker}")
+
+        # Format response to match frontend expectations
         return {
-            "ticker": final_state["ticker"],
-            "timestamp": final_state["timestamp"].isoformat(),
+            "ticker": final_state.get("ticker", ticker),
+            "timestamp": final_state.get("timestamp", datetime.now()).isoformat(),
             "sentiment": {
                 "score": final_state.get("sentiment_score"),
-                "analysis": final_state.get("sentiment_analysis")
+                "analysis": final_state.get("sentiment_analysis"),
             },
             "technical": final_state.get("indicators"),
             "summary": final_state.get("research_summary"),
+            "ai_summary": final_state.get("research_summary"),  # Frontend expects this
             "recommendations": final_state.get("recommendations"),
-            "risk_score": final_state.get("indicators", {}).get("risk_score"),
-            "error": final_state.get("error")
+            "risk_score": (final_state.get("indicators") or {}).get("risk_score"),
+            "error": final_state.get("error"),
+            # Add steps for frontend visualization
+            "steps": [
+                {
+                    "type": "fetch",
+                    "content": f"Fetched stock data and news for {ticker}",
+                    "status": "completed" if final_state.get("stock_data") else "failed"
+                },
+                {
+                    "type": "sentiment",
+                    "content": f"Sentiment analysis: {final_state.get('sentiment_score', 0.5):.2f}",
+                    "status": "completed" if final_state.get("sentiment_analysis") else "failed"
+                },
+                {
+                    "type": "indicators",
+                    "content": "Calculated technical indicators",
+                    "status": "completed" if final_state.get("indicators") else "failed"
+                },
+                {
+                    "type": "synthesis",
+                    "content": "Generated research summary and recommendations",
+                    "status": "completed" if final_state.get("research_summary") else "failed"
+                }
+            ]
         }
-        
+
     except Exception as e:
-        logger.error(f"Error running research graph: {str(e)}")
+        logger.error(f"Error running research graph for {ticker}: {str(e)}")
         return {
             "ticker": ticker,
             "error": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }

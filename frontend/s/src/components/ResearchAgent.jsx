@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-//import ReactMarkdown from "react-markdown";
-//import { runResearchAgent } from "../api/agentApi";
+import ReactMarkdown from "react-markdown";
 import {
   LineChart,
   Line,
@@ -9,16 +8,28 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+
+// ⭐ Import your backend agents
+import {
+  runResearchAgent,
+  runGeminiLLM,
+  runGroqLLM,
+} from "../api/agentApi";
 
 export default function ResearchAgent() {
   const [messages, setMessages] = useState([]);
   const [steps, setSteps] = useState([]);
   const [finalAns, setFinalAns] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+
   const [query, setQuery] = useState("");
+  const [ticker, setTicker] = useState("");
+
   const [collapsedSteps, setCollapsedSteps] = useState({});
 
   const scrollRef = useRef(null);
@@ -35,13 +46,16 @@ export default function ResearchAgent() {
     }));
   };
 
+  // -------------------------------
+  // ⭐ MAIN RESEARCH AGENT CALL
+  // -------------------------------
   const runAgent = async () => {
-    if (!query.trim()) return;
+    if (!query.trim() || !ticker.trim()) return;
 
     const userMessage = {
       id: Date.now(),
       type: "user",
-      content: query,
+      content: `Ticker: ${ticker}\nQuery: ${query}`,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -50,26 +64,20 @@ export default function ResearchAgent() {
     setLoading(true);
 
     try {
-      const res = await runResearchAgent(query);
-
-      // Expected backend shape:
-      // {
-      //   steps: [
-      //     { type: "reasoning" | "tool" | "chart" | "step", content: "...", chartData?, xKey?, yKey? },
-      //   ],
-      //   final: "markdown answer..."
-      // }
+      // CORRECT request to backend: expects (ticker, query)
+      const res = await runResearchAgent(ticker, query);
 
       if (res.data?.steps) setSteps(res.data.steps);
 
-      if (res.data?.final) {
-        setFinalAns(res.data.final);
+      if (res.data?.ai_summary) {
+        setFinalAns(res.data.ai_summary);
+
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 1,
             type: "agent",
-            content: res.data.final,
+            content: res.data.ai_summary,
           },
         ]);
       }
@@ -79,15 +87,51 @@ export default function ResearchAgent() {
         {
           id: Date.now() + 2,
           type: "error",
-          content: " Research Agent crashed. Try again.",
+          content: "Research Agent crashed. Try again.",
         },
       ]);
     }
 
     setLoading(false);
-    setQuery("");
   };
 
+  // -------------------------------
+  // ⭐ GEMINI LLM CALL
+  // -------------------------------
+  const runGemini = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+
+    const res = await runGeminiLLM(query);
+
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), type: "agent", content: res.response },
+    ]);
+
+    setLoading(false);
+  };
+
+  // -------------------------------
+  // ⭐ GROQ LLM CALL
+  // -------------------------------
+  const runGroq = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+
+    const res = await runGroqLLM(query);
+
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), type: "agent", content: res.response },
+    ]);
+
+    setLoading(false);
+  };
+
+  // -------------------------------
+  // PDF EXPORT
+  // -------------------------------
   const handleExportPdf = async () => {
     if (!pdfRef.current) return;
     setExporting(true);
@@ -98,6 +142,7 @@ export default function ResearchAgent() {
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
+
       const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -133,34 +178,55 @@ export default function ResearchAgent() {
         </button>
       </div>
 
-      {/* INPUT BAR */}
-      <div className="flex gap-3 mb-6">
+      {/* INPUT FIELDS */}
+      <div className="flex flex-col gap-3 mb-6">
         <input
-          className="flex-1 bg-neutral-900/70 border border-cyan-700/40 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-cyan-400 placeholder:text-gray-500"
-          placeholder="Ask the agent e.g. 'Compare MA & RSI for RELIANCE.NS over 6 months and suggest trend'"
+          className="bg-neutral-900/70 border border-cyan-700/40 rounded-2xl px-4 py-3 text-white focus:outline-none"
+          placeholder="Enter ticker e.g. RELIANCE.NS"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+        />
+
+        <input
+          className="bg-neutral-900/70 border border-cyan-700/40 rounded-2xl px-4 py-3 text-white focus:outline-none"
+          placeholder="Ask your research question..."
           value={query}
           onKeyDown={(e) => e.key === "Enter" && runAgent()}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <button
-          onClick={runAgent}
-          disabled={loading}
-          className="bg-cyan-700 hover:bg-cyan-600 disabled:bg-cyan-900/60 px-6 py-3 rounded-xl text-white font-semibold transition"
-        >
-          {loading ? "Running..." : "Run"}
-        </button>
+
+        <div className="flex gap-3">
+          <button
+            onClick={runAgent}
+            disabled={loading}
+            className="bg-cyan-700 hover:bg-cyan-600 px-6 py-3 rounded-xl text-white font-semibold transition"
+          >
+            {loading ? "Running..." : "Run Research Agent"}
+          </button>
+
+          <button
+            onClick={runGemini}
+            className="bg-indigo-700 hover:bg-indigo-600 px-4 py-3 rounded-xl text-white"
+          >
+            Gemini Answer
+          </button>
+
+          <button
+            onClick={runGroq}
+            className="bg-rose-700 hover:bg-rose-600 px-4 py-3 rounded-xl text-white"
+          >
+            Groq Answer
+          </button>
+        </div>
       </div>
 
       {/* MAIN PANES */}
-      <div
-        ref={pdfRef}
-        className="grid grid-cols-1 lg:grid-cols-10 gap-6"
-      >
-        {/* LEFT — CHAT / ANSWERS */}
+      <div ref={pdfRef} className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+        {/* LEFT – CHAT */}
         <div className="lg:col-span-6 bg-neutral-900/50 p-4 rounded-2xl border border-neutral-700/60 max-h-[75vh] overflow-y-auto">
           {messages.length === 0 && !loading && (
             <div className="h-full flex items-center justify-center text-gray-500 text-sm">
-              Ask a question to start a research session.
+              Ask something to start a research session.
             </div>
           )}
 
@@ -173,15 +239,15 @@ export default function ResearchAgent() {
           <div ref={scrollRef} />
         </div>
 
-        {/* RIGHT — REASONING TRACE + CHARTS */}
+        {/* RIGHT – STEPS */}
         <div className="lg:col-span-4 bg-neutral-900/50 p-4 rounded-2xl border border-neutral-700/60 max-h-[75vh] overflow-y-auto">
           <h2 className="text-xl font-semibold text-cyan-300 mb-3">
-             Agent Reasoning Trace
+            Agent Reasoning Trace
           </h2>
 
           {steps.length === 0 && !loading && (
             <p className="text-gray-400 text-sm">
-              When the agent runs, you&apos;ll see reasoning steps, tools and charts here.
+              Reasoning, tools and charts will appear here.
             </p>
           )}
 
@@ -202,13 +268,12 @@ export default function ResearchAgent() {
   );
 }
 
-/* ------------ MESSAGE RENDER ------------ */
-
+/* ---------------- MESSAGE RENDER ---------------- */
 function AgentMessage({ type, content }) {
   if (type === "user") {
     return (
       <div className="flex justify-end mb-3">
-        <div className="px-4 py-2 bg-cyan-800 text-white rounded-xl max-w-[75%] shadow shadow-cyan-500/30 text-sm">
+        <div className="px-4 py-2 bg-cyan-800 text-white rounded-xl max-w-[75%] shadow text-sm">
           {content}
         </div>
       </div>
@@ -238,8 +303,7 @@ function AgentMessage({ type, content }) {
   return null;
 }
 
-/* ------------ STEPS / TRACE ------------ */
-
+/* ---------------- STEPS (Right Pane) ---------------- */
 function StepItem({ step, index, collapsed, onToggle }) {
   const isChart = step.type === "chart" && step.chartData;
 
@@ -248,12 +312,8 @@ function StepItem({ step, index, collapsed, onToggle }) {
       <div className="flex items-center justify-between mb-1">
         <div>
           <p className="text-xs text-gray-400">Step {index + 1}</p>
-          <p className="font-semibold text-cyan-300 capitalize flex items-center gap-1">
-            {step.type === "tool"
-              ? "Tool Call"
-              : step.type === "chart"
-              ? "Chart Insight"
-              : step.type || "step"}
+          <p className="font-semibold text-cyan-300 capitalize">
+            {step.type || "step"}
           </p>
         </div>
         <button
@@ -281,24 +341,13 @@ function StepItem({ step, index, collapsed, onToggle }) {
               />
             </div>
           )}
-
-          {step.chartImageUrl && !step.chartData && (
-            <div className="mt-3">
-              <img
-                src={step.chartImageUrl}
-                alt="Chart"
-                className="w-full rounded-lg border border-neutral-600"
-              />
-            </div>
-          )}
         </>
       )}
     </div>
   );
 }
 
-/* ------------ CHART RENDER ------------ */
-
+/* ---------------- CHART RENDER ---------------- */
 function ChartCard({ data, xKey, yKey }) {
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
@@ -314,28 +363,17 @@ function ChartCard({ data, xKey, yKey }) {
         <XAxis dataKey={xKey} tick={{ fontSize: 10 }} />
         <YAxis tick={{ fontSize: 10 }} />
         <Tooltip />
-        <Line
-          type="monotone"
-          dataKey={yKey}
-          strokeWidth={2}
-          dot={false}
-        />
+        <Line type="monotone" dataKey={yKey} strokeWidth={2} dot={false} />
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-/* ------------ LOADING UI ------------ */
-
+/* ---------------- LOADING UI ---------------- */
 function TypingLoader() {
   return (
-    <div className="px-3 py-2 bg-neutral-800 rounded-lg text-cyan-400 w-fit mb-3 text-xs flex items-center gap-2">
-      <span>Thinking</span>
-      <span className="flex gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce"></span>
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.15s]"></span>
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.3s]"></span>
-      </span>
+    <div className="px-3 py-2 bg-neutral-800 rounded-lg text-cyan-400 w-fit mb-3 text-xs">
+      Thinking...
     </div>
   );
 }

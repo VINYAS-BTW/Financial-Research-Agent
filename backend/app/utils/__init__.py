@@ -1,7 +1,7 @@
 """
 Agent Utilities - Shared helper functions across workflows
 """
-from app.agents.utils.agent_utils import (
+from app.utils.agent_utils import (
     create_research_summary,
     generate_recommendations,
     calculate_risk_score,

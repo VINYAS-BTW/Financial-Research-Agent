@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-//import { runResearchAgent } from "../api/agentApi";
-//import ReactMarkdown from "react-markdown";
+import { runResearchAgent, runLLM } from "../api/agentApi";
+import ReactMarkdown from "react-markdown";
 
 export default function FloatingAgent() {
   const [open, setOpen] = useState(false);
@@ -20,27 +20,58 @@ export default function FloatingAgent() {
     const userMsg = { type: "user", content: input };
     setMessages((prev) => [...prev, userMsg]);
 
+    const userInput = input.trim();
     setInput("");
     setIsThinking(true);
 
     try {
-      const res = await runResearchAgent(input);
+      // Try to parse ticker from input (e.g., "RELIANCE.NS description" or "analyze RELIANCE")
+      // If it looks like a research query, use research agent, otherwise use LLM
+      const tickerMatch = userInput.match(/([A-Z]+\.(NS|BO))/i) || 
+                         userInput.match(/analyze\s+([A-Z]+)/i);
+      
+      if (tickerMatch) {
+        // Extract ticker and query
+        const ticker = tickerMatch[1]?.toUpperCase() || tickerMatch[1];
+        const query = userInput.replace(tickerMatch[0], "").trim() || "Provide a comprehensive analysis";
+        
+        // Use research agent
+        const res = await runResearchAgent(ticker, query);
 
-      // Show steps
-      if (res.data.steps) {
-        res.data.steps.forEach((s) =>
-          setMessages((prev) => [...prev, { type: s.type, content: s.content }])
-        );
-      }
+        // Show steps
+        if (res.data?.steps) {
+          res.data.steps.forEach((s) =>
+            setMessages((prev) => [...prev, { type: s.type || "step", content: s.content }])
+          );
+        }
 
-      // Final answer
-      if (res.data.final) {
-        setMessages((prev) => [...prev, { type: "agent", content: res.data.final }]);
+        // Final answer - use ai_summary or summary
+        const summary = res.data?.ai_summary || res.data?.summary;
+        if (summary) {
+          setMessages((prev) => [...prev, { type: "agent", content: summary }]);
+        } else if (res.data?.recommendations) {
+          setMessages((prev) => [...prev, { 
+            type: "agent", 
+            content: "**Recommendations:**\n" + res.data.recommendations.join("\n") 
+          }]);
+        }
+      } else {
+        // Use generic LLM for general questions
+        const res = await runLLM("auto", userInput);
+        
+        if (res.success && res.response) {
+          setMessages((prev) => [...prev, { type: "agent", content: res.response }]);
+        } else {
+          setMessages((prev) => [...prev, { 
+            type: "error", 
+            content: res.error || "Failed to get response" 
+          }]);
+        }
       }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { type: "error", content: "⚠️ Agent failed. Try again." },
+        { type: "error", content: `⚠️ Error: ${err.message || "Agent failed. Try again."}` },
       ]);
     }
 

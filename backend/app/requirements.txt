@@ -3,12 +3,10 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 
 # ---------------- DATA & FINANCE ----------------
-# Use prebuilt wheels - no compilation needed
-pandas>=2.1.0
-numpy>=1.26.0  # Will auto-install compatible version
-yfinance>=0.2.35
-requests>=2.31.0
-vaderSentiment>=3.3.2
+pandas
+yfinance
+requests
+vaderSentiment
 
 # ---------------- ASYNC & HTTP ----------------
 httpx>=0.26.0
@@ -20,8 +18,7 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 
 # ---------------- DATABASE ----------------
-motor>=3.3.2
-pymongo>=4.6.0  # Motor dependency
+motor
 
 # ---------------- CACHE ----------------
 redis>=5.0.1
@@ -38,6 +35,10 @@ langgraph>=0.0.62
 langchain>=0.1.6
 langchain-core>=0.1.23
 langchain-community>=0.0.20
+
+# ---------------- LLM PROVIDERS ----------------
+groq>=0.4.0
+google-generativeai>=0.3.0
 
 # ---------------- ADDITIONAL DEPENDENCIES ----------------
 # These are often needed but may not be explicit

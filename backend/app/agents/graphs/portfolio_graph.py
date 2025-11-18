@@ -11,7 +11,7 @@ from app.agents.state.agent_state import PortfolioState
 from app.agents.nodes.fetch_node import fetch_portfolio_data
 from app.agents.nodes.sentiment_node import analyze_portfolio_sentiment
 from app.agents.nodes.indicator_node import calculate_portfolio_indicators
-from app.agents.utils.agent_utils import (
+from app.utils.agent_utils import (
     format_portfolio_summary,
     calculate_ticker_score,
     log_state_transition
