@@ -1,5 +1,5 @@
 # backend/app/services/indicators.py
-from typing import List
+from typing import List, Optional, Dict, Any
 import math
 
 
