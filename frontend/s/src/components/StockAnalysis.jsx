@@ -1,6 +1,32 @@
 import { useState, useEffect } from "react";
 import Plot from "react-plotly.js";
-import { fetchStockData } from "../api";
+
+// Fetch actual stock data from your API
+const API_BASE = "http://localhost:8000/api";
+
+const fetchStockData = async (symbol, period) => {
+  try {
+    const response = await fetch(`${API_BASE}/stock-data?symbol=${symbol}&period=${period}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    console.log("📊 Stock API Response:", result);
+
+    if (result.success && Array.isArray(result.data)) {
+      return result.data;
+    } else {
+      console.warn("⚠️ Invalid stock API format or no data:", result);
+      return [];
+    }
+  } catch (error) {
+    console.error("❌ Stock API Error:", error.message);
+    throw error;
+  }
+};
 
 function StockAnalysis({ symbol1, symbol2, period, trigger }) {
   const [data1, setData1] = useState(null);
@@ -117,7 +143,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
         </div>
 
         {/* Price Chart */}
-        <div className="bg-[#0a0a0f] border border-gray-800 rounded-4xl p-4">
+        <div className="bg-[#0a0a0f] border border-gray-800 rounded-3xl p-4">
           <Plot
             data={[
               {
@@ -168,7 +194,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
         </div>
 
         {/* RSI Chart */}
-        <div className="bg-[#0a0a0f] border border-gray-800 rounded-4xl p-4 font-vi2">
+        <div className="bg-[#0a0a0f] border border-gray-800 rounded-3xl p-4">
           <Plot
             data={[
               {
@@ -182,7 +208,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
             ]}
             layout={{
               title: {
-                text: `${symbol} RSI`,
+                text: `${symbol} RSI (Relative Strength Index)`,
                 font: { color: "#e5e7eb", size: 16 },
               },
               paper_bgcolor: "#0a0a0f",
@@ -227,7 +253,29 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
                   line: { color: "#6b7280", dash: "dot", width: 1 },
                 },
               ],
-              height: 300,
+              annotations: [
+                {
+                  x: 0.98,
+                  y: 70,
+                  xref: "paper",
+                  yref: "y",
+                  text: "Overbought (70)",
+                  showarrow: false,
+                  font: { color: "#ef4444", size: 10 },
+                  xanchor: "right",
+                },
+                {
+                  x: 0.98,
+                  y: 30,
+                  xref: "paper",
+                  yref: "y",
+                  text: "Oversold (30)",
+                  showarrow: false,
+                  font: { color: "#3b82f6", size: 10 },
+                  xanchor: "right",
+                },
+              ],
+              height: 350,
               margin: { t: 50, b: 50, l: 60, r: 20 },
               legend: {
                 font: { color: "#9ca3af" },
@@ -243,13 +291,32 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
   };
 
   const renderComparison = () => {
-    if (!data1 || !data2) return null;
+    if (!data1 || !data2) {
+      return (
+        <div className="mt-8 pt-8 border-t border-gray-800">
+          <h3 className="text-3xl font-bold text-white mb-6">
+          Comparison Chart
+          </h3>
+          <div className="bg-[#0a0a0f] border border-gray-800 rounded-3xl p-8 text-center">
+            <div className="text-cyan-400 text-5xl mb-4">📈</div>
+            <p className="text-gray-400 text-lg">
+              Enter a second stock symbol above to see side-by-side comparison
+            </p>
+            <p className="text-gray-500 text-sm mt-2">
+              Compare price movements, trends, and correlations between two
+              stocks
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-8 pt-8 border-t border-gray-800">
         <h3 className="text-3xl font-bold text-white mb-6">
-          Comparison Chart
+          📊 Comparison Chart
         </h3>
-        <div className="bg-[#0a0a0f] border border-gray-800 rounded-xl p-4">
+        <div className="bg-[#0a0a0f] border border-gray-800 rounded-3xl p-4">
           <Plot
             data={[
               {
@@ -272,7 +339,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
             layout={{
               title: {
                 text: `${symbol1} vs ${symbol2}`,
-                font: { color: "#e5e7eb", size: 16 },
+                font: { color: "#e5e7eb", size: 18, weight: "bold" },
               },
               paper_bgcolor: "#0a0a0f",
               plot_bgcolor: "#0a0a0f",
@@ -290,8 +357,10 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
               height: 450,
               margin: { t: 50, b: 50, l: 60, r: 20 },
               legend: {
-                font: { color: "#9ca3af" },
+                font: { color: "#9ca3af", size: 12 },
                 bgcolor: "rgba(0,0,0,0)",
+                orientation: "h",
+                y: -0.15,
               },
             }}
             config={{ responsive: true, displayModeBar: false }}
@@ -304,7 +373,7 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold bg-linear-to-r from-neutral-100 via-cyan-100 to-neutral-100 bg-clip-text text-transparent mb-6">
+      <h2 className="text-3xl font-bold bg-gradient-to-r from-neutral-100 via-cyan-100 to-neutral-100 bg-clip-text text-transparent mb-6">
         Stock Price & Technical Indicators
       </h2>
 
@@ -315,13 +384,20 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
           {symbol2 && symbol2 !== symbol1 ? (
             renderStockSection(data2, error2, loading2, symbol2)
           ) : (
-            <div className="flex items-center justify-center h-full bg-[#0a0a0f] border border-gray-800 rounded-xl text-gray-400">
-              Enter a second stock symbol above for comparison
+            <div className="flex items-center justify-center h-full bg-[#0a0a0f] border border-gray-800 rounded-3xl text-gray-400 p-8 text-center">
+              <div>
+                <div className="text-4xl mb-3">💡</div>
+                <p className="text-lg">Enter a second stock symbol above</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  for side-by-side comparison
+                </p>
+              </div>
             </div>
           )}
         </div>
       </div>
 
+      {/* COMPARISON CHART - Always rendered, shows placeholder when no data */}
       {renderComparison()}
     </div>
   );

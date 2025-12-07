@@ -16,7 +16,7 @@ def fetch_financial_news(symbol: str, api_key: str) -> Tuple[List[Dict[str, Any]
     if not api_key:
         return None, "API key missing"
 
-    # --- Build a much stronger search query ---
+    # Build a much stronger search query 
     base = symbol.replace(".NS", "").replace(".BO", "")
     query = f"{base} OR {base} stock OR {base} company OR {base} shares"
 
