@@ -38,8 +38,28 @@ export async function runPortfolioAgent(tickers, watchlistId = null) {
   return await res.json();
 }
 
+// --------- UNIFIED AGENT ----------
+// --------- UNIFIED AGENT ----------
+export async function runUnifiedAgent(ticker, query) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/unified`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker, description: query }),
+    });
 
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Backend error:", errorText);
+      throw new Error(`Unified agent error: ${res.status}`);
+    }
 
+    return await res.json(); // ✅ RETURN the response!
+  } catch (error) {
+    console.error("❌ Fetch error:", error);
+    throw error;
+  }
+}
 // --------- GENERIC LLM CALL ----------
 export async function runLLM(model, prompt) {
   const res = await fetch(`${API_BASE_URL}/llm`, {

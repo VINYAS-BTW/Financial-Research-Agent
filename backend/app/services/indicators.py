@@ -236,3 +236,100 @@ def calculate_moving_averages(historical_data: List[Dict[str, Any]]) -> Dict[str
         "sma_50": round(sma_50, 2),
         "sma_200": round(sma_200, 2)
     }
+def calculate_all_indicators(historical_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calculate all technical indicators at once
+    This is what unified_agent_graph.py expects
+    """
+    if not historical_data:
+        return {
+            "rsi": {"current": 50.0, "values": []},
+            "macd": {"macd": 0, "signal": 0, "histogram": 0},
+            "bollinger_bands": {"upper_band": 0, "middle_band": 0, "lower_band": 0, "current_price": 0},
+            "moving_averages": {"sma_50": 0, "sma_200": 0},
+            "signals": {"overall_signal": "hold", "strength": 0}
+        }
+    
+    try:
+        rsi_data = calculate_rsi(historical_data)
+        macd_data = calculate_macd(historical_data)
+        bb_data = calculate_bollinger_bands(historical_data)
+        ma_data = calculate_moving_averages(historical_data)
+        
+        # Calculate overall signal based on indicators
+        signal, strength = _calculate_overall_signal(rsi_data, macd_data, ma_data)
+        
+        return {
+            "rsi": rsi_data,
+            "macd": macd_data,
+            "bollinger_bands": bb_data,
+            "moving_averages": ma_data,
+            "signals": {
+                "overall_signal": signal,
+                "strength": strength
+            }
+        }
+    except Exception as e:
+        return {
+            "rsi": {"current": 50.0, "values": []},
+            "macd": {"macd": 0, "signal": 0, "histogram": 0},
+            "bollinger_bands": {"upper_band": 0, "middle_band": 0, "lower_band": 0, "current_price": 0},
+            "moving_averages": {"sma_50": 0, "sma_200": 0},
+            "signals": {"overall_signal": "hold", "strength": 0},
+            "error": str(e)
+        }
+
+
+def _calculate_overall_signal(rsi_data: Dict, macd_data: Dict, ma_data: Dict) -> tuple:
+    """
+    Calculate overall buy/sell signal based on multiple indicators
+    Returns (signal, strength) where:
+    - signal: "strong_buy", "buy", "hold", "sell", "strong_sell"
+    - strength: 0-5 (number of indicators agreeing)
+    """
+    signals = []
+    
+    # RSI signals
+    rsi_current = rsi_data.get("current", 50)
+    if rsi_current < 30:
+        signals.append("buy")
+    elif rsi_current > 70:
+        signals.append("sell")
+    else:
+        signals.append("neutral")
+    
+    # MACD signals
+    macd_histogram = macd_data.get("histogram", 0)
+    if macd_histogram > 0:
+        signals.append("buy")
+    elif macd_histogram < 0:
+        signals.append("sell")
+    else:
+        signals.append("neutral")
+    
+    # Moving average signals (golden cross / death cross)
+    sma_50 = ma_data.get("sma_50", 0)
+    sma_200 = ma_data.get("sma_200", 0)
+    if sma_50 > sma_200:
+        signals.append("buy")
+    elif sma_50 < sma_200:
+        signals.append("sell")
+    else:
+        signals.append("neutral")
+    
+    # Count signals
+    buy_count = signals.count("buy")
+    sell_count = signals.count("sell")
+    
+    # Determine overall signal
+    if buy_count >= 2:
+        overall = "strong_buy" if buy_count == 3 else "buy"
+        strength = buy_count
+    elif sell_count >= 2:
+        overall = "strong_sell" if sell_count == 3 else "sell"
+        strength = sell_count
+    else:
+        overall = "hold"
+        strength = 0
+    
+    return overall, strength
