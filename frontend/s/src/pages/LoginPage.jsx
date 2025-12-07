@@ -15,7 +15,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black text-white">
+    <div className="min-h-screen flex items-center justify-center bg-black text-white font-vi4">
       <div className="bg-neutral-900 p-10 rounded-2xl w-[350px] border border-neutral-700">
         <h2 className="text-3xl font-bold mb-3">Sign In</h2>
         <p className="text-gray-400 mb-6">
@@ -34,7 +34,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full mt-5 py-2 bg-cyan-500 rounded-lg font-semibold hover:bg-cyan-400 transition"
+            className="w-full mt-5 py-2 bg-emerald-500 rounded-lg font-semibold hover:bg-emerald-800 transition cursor-pointer"
           >
             Sign In
           </button>

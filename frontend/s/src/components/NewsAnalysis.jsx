@@ -11,12 +11,12 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   const [error2, setError2] = useState(null);
 
   useEffect(() => {
-    console.log("🔄 NewsAnalysis useEffect triggered", { symbol1, symbol2, trigger });
+    console.log(" NewsAnalysis useEffect triggered", { symbol1, symbol2, trigger });
     
     async function loadNews() {
       try {
         if (!symbol1) {
-          console.log("⚠️ No symbol1 provided");
+          console.log(" No symbol1 provided");
           return;
         }
 
@@ -87,7 +87,8 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
     return { avg, pos, neu, neg, overall };
   };
 
-  const renderGauge = (avg = 0, symbol = "") => (
+ const renderGauge = (avg = 0, symbol = "") => (
+  <div className="rounded-4xl overflow-hidden bg-[#12141a] p-2 shadow-md">
     <Plot
       data={[
         {
@@ -123,7 +124,9 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
       config={{ responsive: true, displayModeBar: false }}
       style={{ width: "100%" }}
     />
-  );
+  </div>
+);
+
 
   const renderNews = (news, loading, error, symbol) => {
     console.log(`🎨 Rendering news for ${symbol}:`, { loading, error, newsCount: news.length });
@@ -149,7 +152,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
     
     if (!Array.isArray(news) || news.length === 0) {
       return (
-        <div className="flex items-center justify-center h-64 bg-gray-900 border border-gray-700 rounded-xl text-gray-400">
+        <div className="flex items-center justify-center h-64 bg-gray-900 border border-gray-700 rounded-4xl text-gray-400">
           No news found for {symbol}
         </div>
       );
@@ -159,7 +162,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
     const displayNews = news.slice(0, 8); // ✅ Only show top 8 articles
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 ">
         <h3 className="text-2xl font-semibold text-white">
           News & Sentiment: <span className="text-emerald-400">{symbol}</span>
         </h3>
@@ -167,7 +170,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
         {summary && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
+              <div className="bg-gray-950 border border-gray-700 rounded-4xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Average
                 </div>
@@ -175,7 +178,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
                   {summary.avg.toFixed(3)}
                 </div>
               </div>
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
+              <div className="bg-gray-950 border border-gray-700 rounded-4xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Positive
                 </div>
@@ -183,7 +186,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
                   🟢 {summary.pos}
                 </div>
               </div>
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
+              <div className="bg-gray-950 border border-gray-700 rounded-4xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Neutral
                 </div>
@@ -191,7 +194,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
                   🟡 {summary.neu}
                 </div>
               </div>
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
+              <div className="bg-gray-950 border border-gray-700 rounded-4xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Negative
                 </div>
@@ -201,12 +204,12 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
               </div>
             </div>
 
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+            <div className="bg-gray-900 border border-gray-700 rounded-4xl p-4">
               {renderGauge(summary.avg, symbol)}
             </div>
 
             <div
-              className={`rounded-xl p-4 border ${
+              className={`rounded-4xl p-4 border ${
                 summary.overall === "Positive"
                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
                   : summary.overall === "Negative"
@@ -228,7 +231,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
         )}
 
         <div>
-          <h4 className="text-xl font-semibold text-white mb-4">
+          <h4 className="text-4xl font-semibold text-white mb-4">
             Latest Headlines <span className="text-sm text-gray-500">(Top 8)</span>
           </h4>
           <div className="space-y-3">
@@ -246,7 +249,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
               return (
               <details
                 key={i}
-                className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden hover:border-emerald-500/50 transition group"
+                className="bg-gray-900 border border-gray-700 rounded-4xl overflow-hidden hover:border-emerald-500/50 transition group font-vi2"
               >
                 <summary className="px-4 py-3 cursor-pointer flex items-start gap-3 hover:bg-gray-800/50 transition">
                   <span className="text-lg shrink-0">{sentimentIcon}</span>
@@ -280,7 +283,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <div className="min-h-screen bg-stone-950 text-white p-8 rounded-4xl ">
       <h2 className="text-3xl font-bold text-white mb-8">
         News & Sentiment Analysis
       </h2>
@@ -294,7 +297,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
             {renderNews(news2, loading2, error2, symbol2)}
           </>
         ) : (
-          <div className="flex items-center justify-center h-64 bg-gray-900 border border-gray-700 rounded-xl text-gray-400">
+          <div className="flex items-center justify-center h-64 bg-gray-900 border border-gray-700 rounded-4xl text-gray-400">
             Add a second stock symbol for comparison
           </div>
         )}
