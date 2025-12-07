@@ -39,7 +39,7 @@ export default function ResearchAgent() {
     setLoading(true);
 
     try {
-      console.log("🚀 Calling unified agent with:", { ticker, query });
+      console.log("Calling unified agent with:", { ticker, query });
       
       const res = await runUnifiedAgent(ticker, query);
       
@@ -76,7 +76,7 @@ export default function ResearchAgent() {
         throw new Error(res.message || "Analysis failed");
       }
     } catch (error) {
-      console.error("❌ Agent error:", error);
+      console.error(" Agent error:", error);
       setMessages((prev) => [
         ...prev,
         {
@@ -133,14 +133,14 @@ export default function ResearchAgent() {
       {/* INPUT FIELDS */}
       <div className="flex flex-col gap-3 mb-6">
         <input
-          className="bg-[#12141a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-500"
+          className="bg-[#111] border border-gray-800 rounded-3xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-100 "
           placeholder="Enter ticker e.g. RELIANCE.NS (or multiple: RELIANCE.NS TCS.NS)"
           value={ticker}
           onChange={(e) => setTicker(e.target.value)}
         />
 
         <input
-          className="bg-[#12141a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-500"
+          className="bg-[#111] border border-gray-700 rounded-3xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-100"
           placeholder='Ask your research question... (e.g. "which is better to buy")'
           value={query}
           onKeyDown={(e) => e.key === "Enter" && runAgent()}
@@ -151,9 +151,9 @@ export default function ResearchAgent() {
           <button
             onClick={runAgent}
             disabled={loading}
-            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 px-6 py-3 rounded-xl text-white font-semibold transition disabled:opacity-50"
+            className="bg-gradient-to-r from-emerald-500 to-teal-900 hover:from-emerald-600 hover:to-teal-900 px-6 py-3 rounded-2xl text-white font-semibold transition disabled:opacity-50 cursor-pointer mt-2"
           >
-            {loading ? "Running..." : "Run Research Agent"}
+            {loading ? "Runnin'..." : "Run Research Agent"}
           </button>
         </div>
       </div>
@@ -163,11 +163,11 @@ export default function ResearchAgent() {
         {/* LEFT – CHAT */}
         <div className="lg:col-span-6 bg-[#12141a] border border-gray-800 p-4 rounded-xl max-h-[70vh] overflow-y-auto">
           {messages.length === 0 && !loading && (
-            <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+            <div className="h-full flex items-center justify-center text-gray-200 text-sm">
               <div className="text-center">
                 <p>Ask a question to start research session</p>
                 <p className="text-xs mt-2 text-gray-600">
-                  💡 Tip: For comparison, enter multiple tickers separated by space
+                   Tip: For comparison, enter multiple tickers separated by space
                 </p>
               </div>
             </div>

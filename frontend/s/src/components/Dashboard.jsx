@@ -188,10 +188,10 @@ function Dashboard() {
 
       <div className="relative flex font-vi">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-0 h-screen w-20 glass-card flex flex-col items-center py-6 z-50">
+        <aside className="fixed left-0 top-0 h-screen w-20 border-r-2 flex flex-col items-center py-6 z-50 shadow-2xl bg-black">
           {/* Logo */}
           <div className="mb-8 icon-float cursor-pointer">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-lime-600 via-lime-400 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 overflow-hidden">
+            <div className="w-9 h-9 rounded-2xl  flex items-center justify-center  overflow-hidden">
               <img
                 src="../src/assets/logo.png"
                 alt="Logo"
@@ -339,7 +339,7 @@ function Dashboard() {
                   <button
                     onClick={handleFetch}
                     disabled={isLoading}
-                    className="px-5 py-1.5 glass-card hover:bg-white/15 border bg-gradient-to-br from-emerald-600 hover:border-white/50 rounded-full text-sm text-white font-medium transition-all disabled:opacity-50 btn-glow relative overflow-hidden group"
+                    className="px-5 py-1.5 glass-card hover:bg-white/15  bg-gradient-to-br from-emerald-600 hover:border-white/50 rounded-full text-sm text-white font-medium transition-all disabled:opacity-50  relative overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <span className="relative z-10">{isLoading ? "Gettin' it..." : "Fetch Data"}</span>
@@ -426,7 +426,7 @@ function Dashboard() {
           </main>
 
           {/* Footer */}
-          <footer className="border-t border-white/10 px-8 py-4 glass-card font-vi4">
+          <footer className="border-t border-white/10 px-8 py-4 font-vi4">
             <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center space-x-6">
                 <span>Data: Yahoo Finance • NewsAPI</span>
