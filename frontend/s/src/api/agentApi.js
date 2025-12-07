@@ -38,12 +38,7 @@ export async function runPortfolioAgent(tickers, watchlistId = null) {
   return await res.json();
 }
 
-//
-// ---------------------------
-// ⭐ NEW — LLM API Integrations
-// ---------------------------
-// Backend must expose: POST /api/agents/llm
-//
+
 
 // --------- GENERIC LLM CALL ----------
 export async function runLLM(model, prompt) {

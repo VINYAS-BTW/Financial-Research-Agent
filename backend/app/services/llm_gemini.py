@@ -16,7 +16,7 @@ async def query_gemini(prompt: str) -> str:
 
     headers = {"Content-Type": "application/json"}
     payload = {
-        "contents": [
+        "contents": [   
             {"parts": [{"text": prompt}]}
         ]
     }
