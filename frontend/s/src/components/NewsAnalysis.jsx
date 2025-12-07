@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Plot from "react-plotly.js";
-import { fetchNewsData } from "../api";
+import { fetchNewsData } from "../api"; // ✅ Import real API
 
-function NewsAnalysis({ symbol1, symbol2, trigger }) {
+function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   const [news1, setNews1] = useState([]);
   const [news2, setNews2] = useState([]);
   const [loading1, setLoading1] = useState(false);
@@ -11,17 +11,28 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
   const [error2, setError2] = useState(null);
 
   useEffect(() => {
+    console.log("🔄 NewsAnalysis useEffect triggered", { symbol1, symbol2, trigger });
+    
     async function loadNews() {
       try {
-        if (!symbol1) return;
+        if (!symbol1) {
+          console.log("⚠️ No symbol1 provided");
+          return;
+        }
 
         setLoading1(true);
         setError1(null);
+        console.log("📥 Loading news for symbol1:", symbol1);
 
         const n1 = await fetchNewsData(symbol1);
-        setNews1(n1);
+        console.log("✅ News1 loaded:", n1, "articles");
+        
+        // Handle different response formats
+        const articles1 = Array.isArray(n1) ? n1 : (n1?.articles || n1?.data || []);
+        console.log("📰 Processed articles1:", articles1.length, "items");
+        setNews1(articles1);
       } catch (err) {
-        console.error("❌ Error fetching news1:", err.message);
+        console.error("❌ Error fetching news1:", err);
         setError1("Failed to load news for " + symbol1);
       } finally {
         setLoading1(false);
@@ -31,11 +42,17 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
         try {
           setLoading2(true);
           setError2(null);
+          console.log("📥 Loading news for symbol2:", symbol2);
 
           const n2 = await fetchNewsData(symbol2);
-          setNews2(n2);
+          console.log("✅ News2 loaded:", n2, "articles");
+          
+          // Handle different response formats
+          const articles2 = Array.isArray(n2) ? n2 : (n2?.articles || n2?.data || []);
+          console.log("📰 Processed articles2:", articles2.length, "items");
+          setNews2(articles2);
         } catch (err) {
-          console.error("❌ Error fetching news2:", err.message);
+          console.error("❌ Error fetching news2:", err);
           setError2("Failed to load news for " + symbol2);
         } finally {
           setLoading2(false);
@@ -50,7 +67,18 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
 
   const computeSummary = (articles = []) => {
     if (!Array.isArray(articles) || articles.length === 0) return null;
-    const scores = articles.map((a) => a.score ?? 0);
+    
+    // Calculate scores - handle both pre-calculated and raw articles
+    const scores = articles.map((a) => {
+      // If score exists, use it
+      if (typeof a.score === 'number') return a.score;
+      
+      // Otherwise try to infer from sentiment label
+      if (a.sentiment === "Positive" || a.sentiment === "positive") return 0.6;
+      if (a.sentiment === "Negative" || a.sentiment === "negative") return -0.6;
+      return 0; // Neutral
+    });
+    
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     const pos = scores.filter((s) => s >= 0.05).length;
     const neu = scores.filter((s) => s > -0.05 && s < 0.05).length;
@@ -98,29 +126,37 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
   );
 
   const renderNews = (news, loading, error, symbol) => {
+    console.log(`🎨 Rendering news for ${symbol}:`, { loading, error, newsCount: news.length });
+    
     if (loading) {
       return (
         <div className="flex items-center justify-center h-64 text-gray-400">
-          Loading news for {symbol}...
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+            <p>Loading news for {symbol}...</p>
+          </div>
         </div>
       );
     }
+    
     if (error) {
       return (
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl">
-          {error}
+          ⚠️ {error}
         </div>
       );
     }
+    
     if (!Array.isArray(news) || news.length === 0) {
       return (
-        <div className="flex items-center justify-center h-64 bg-[#12141a] border border-gray-800 rounded-xl text-gray-400">
+        <div className="flex items-center justify-center h-64 bg-gray-900 border border-gray-700 rounded-xl text-gray-400">
           No news found for {symbol}
         </div>
       );
     }
 
     const summary = computeSummary(news);
+    const displayNews = news.slice(0, 8); // ✅ Only show top 8 articles
 
     return (
       <div className="space-y-6">
@@ -131,7 +167,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
         {summary && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-[#12141a] border border-gray-800 rounded-xl p-4 text-center">
+              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Average
                 </div>
@@ -139,7 +175,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
                   {summary.avg.toFixed(3)}
                 </div>
               </div>
-              <div className="bg-[#12141a] border border-gray-800 rounded-xl p-4 text-center">
+              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Positive
                 </div>
@@ -147,7 +183,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
                   🟢 {summary.pos}
                 </div>
               </div>
-              <div className="bg-[#12141a] border border-gray-800 rounded-xl p-4 text-center">
+              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Neutral
                 </div>
@@ -155,7 +191,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
                   🟡 {summary.neu}
                 </div>
               </div>
-              <div className="bg-[#12141a] border border-gray-800 rounded-xl p-4 text-center">
+              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-center">
                 <div className="text-xs text-gray-400 mb-1 uppercase tracking-wider">
                   Negative
                 </div>
@@ -165,12 +201,10 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
               </div>
             </div>
 
-            {/* Gauge Chart */}
-            <div className="bg-[#12141a] border border-gray-800 rounded-xl p-4">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
               {renderGauge(summary.avg, symbol)}
             </div>
 
-            {/* Sentiment Interpretation */}
             <div
               className={`rounded-xl p-4 border ${
                 summary.overall === "Positive"
@@ -193,28 +227,34 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
           </>
         )}
 
-        {/* Headlines */}
         <div>
-          <h4 className="text-xl font-semibold text-white mb-4">Latest Headlines</h4>
+          <h4 className="text-xl font-semibold text-white mb-4">
+            Latest Headlines <span className="text-sm text-gray-500">(Top 8)</span>
+          </h4>
           <div className="space-y-3">
-            {news.map((a, i) => (
+            {displayNews.map((a, i) => {
+              // Determine sentiment icon
+              const sentiment = a.sentiment || a.Sentiment || "Neutral";
+              const sentimentIcon = 
+                sentiment === "Positive" || sentiment === "positive" ? "🟢" :
+                sentiment === "Negative" || sentiment === "negative" ? "🔴" : "🟡";
+              
+              // Get score safely
+              const score = typeof a.score === 'number' ? a.score : 
+                           typeof a.Score === 'number' ? a.Score : 0;
+              
+              return (
               <details
                 key={i}
-                className="bg-[#12141a] border border-gray-800 rounded-xl overflow-hidden hover:border-emerald-500/50 transition group"
+                className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden hover:border-emerald-500/50 transition group"
               >
-                <summary className="px-4 py-3 cursor-pointer flex items-start gap-3 hover:bg-gray-800/30 transition">
-                  <span className="text-lg shrink-0">
-                    {a.sentiment === "Positive"
-                      ? "🟢"
-                      : a.sentiment === "Negative"
-                      ? "🔴"
-                      : "🟡"}
-                  </span>
+                <summary className="px-4 py-3 cursor-pointer flex items-start gap-3 hover:bg-gray-800/50 transition">
+                  <span className="text-lg shrink-0">{sentimentIcon}</span>
                   <span className="font-semibold text-white flex-1">
                     {i + 1}. {a.title || "Untitled"}
                   </span>
                 </summary>
-                <div className="px-4 pb-4 pt-2 border-t border-gray-800 space-y-3">
+                <div className="px-4 pb-4 pt-2 border-t border-gray-700 space-y-3">
                   <p className="text-gray-300 text-sm leading-relaxed">
                     {a.description || "No description available."}
                   </p>
@@ -227,12 +267,12 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
                     Read Full Article →
                   </a>
                   <p className="text-xs text-gray-400">
-                    Score: {(a?.score ?? 0).toFixed(3)} |{" "}
-                    {a?.publishedAt || "N/A"} | {a?.source?.name || "Unknown"}
+                    Score: {score.toFixed(3)} |{" "}
+                    {a.publishedAt || a.published_at || "N/A"} | {a.source?.name || a.source || "Unknown"}
                   </p>
                 </div>
               </details>
-            ))}
+            )})}
           </div>
         </div>
       </div>
@@ -240,7 +280,7 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-950 text-white p-8">
       <h2 className="text-3xl font-bold text-white mb-8">
         News & Sentiment Analysis
       </h2>
@@ -250,11 +290,11 @@ function NewsAnalysis({ symbol1, symbol2, trigger }) {
 
         {symbol2 && symbol2 !== symbol1 ? (
           <>
-            <hr className="border-gray-800" />
+            <hr className="border-gray-700" />
             {renderNews(news2, loading2, error2, symbol2)}
           </>
         ) : (
-          <div className="flex items-center justify-center h-64 bg-[#12141a] border border-gray-800 rounded-xl text-gray-400">
+          <div className="flex items-center justify-center h-64 bg-gray-900 border border-gray-700 rounded-xl text-gray-400">
             Add a second stock symbol for comparison
           </div>
         )}
