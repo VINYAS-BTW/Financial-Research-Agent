@@ -39,11 +39,11 @@ export default function ResearchAgent() {
     setLoading(true);
 
     try {
-      console.log("Calling unified agent with:", { ticker, query });
+      console.log("🚀 Calling unified agent with:", { ticker, query });
       
       const res = await runUnifiedAgent(ticker, query);
       
-      console.log("📥 Response:", res);
+      console.log(" Response:", res);
 
       if (res.success && res.data) {
         const data = res.data;
@@ -220,7 +220,7 @@ function AgentMessage({ type, content, isComparison, comparisonTicker }) {
         <div className="px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl max-w-[85%] text-sm">
           {isComparison && (
             <div className="mb-2 px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded text-xs text-emerald-300 inline-block">
-              📊 Comparison Mode
+               Comparison Mode
             </div>
           )}
           <div className="prose prose-invert prose-sm max-w-none">

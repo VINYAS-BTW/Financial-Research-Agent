@@ -1,7 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import StockAnalysis from "./StockAnalysis";
 import NewsAnalysis from "./NewsAnalysis";
-import { fetchWatchlist, addToWatchlist, removeFromWatchlist } from "../api.js";
+import {
+  fetchWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+  searchStocks,
+} from "../api.js";
 import ResearchAgent from "./ResearchAgent.jsx";
 import FloatingAgent from "./FloatingAgent.jsx";
 import {
@@ -13,6 +18,9 @@ import {
   BarChart3,
   Sparkles,
   Grid3x3,
+  Star,
+  X,
+  TrendingUp,
 } from "lucide-react";
 
 function Dashboard() {
@@ -25,6 +33,20 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [watchlist, setWatchlist] = useState([]);
 
+  // 🔹 History state
+  const [history, setHistory] = useState([]);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+
+  const [showWatchlistPanel, setShowWatchlistPanel] = useState(false);
+
+  // Search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const searchInputRef = useRef(null);
+
   useEffect(() => {
     async function loadWatchlist() {
       const wl = await fetchWatchlist("guest");
@@ -32,6 +54,50 @@ function Dashboard() {
     }
     loadWatchlist();
   }, []);
+
+  // 🔹 Load history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("fin_history");
+      if (saved) {
+        setHistory(JSON.parse(saved));
+      }
+    } catch (err) {
+      console.error("Error loading history", err);
+    }
+  }, []);
+
+  // 🔹 Save history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("fin_history", JSON.stringify(history));
+    } catch (err) {
+      console.error("Error saving history", err);
+    }
+  }, [history]);
+
+  // Handle search with debouncing
+  const handleSearch = async (query) => {
+    setSearchQuery(query);
+
+    if (query.trim().length === 0) {
+      setSearchResults([]);
+      setShowSearchDropdown(false);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      const results = await searchStocks(query);
+      setSearchResults(results);
+      setShowSearchDropdown(results.length > 0);
+      setIsSearching(false);
+    }, 300);
+  };
 
   const normalizeSymbol = (s) => {
     if (!s) return "";
@@ -46,9 +112,10 @@ function Dashboard() {
     return s;
   };
 
-  const handleFetch = async () => {
-    const s1 = normalizeSymbol(symbol1);
-    const s2 = normalizeSymbol(symbol2);
+  // handleFetch now accepts optional overrides + logs history
+  const handleFetch = async (overrideSymbol1, overrideSymbol2) => {
+    const s1 = normalizeSymbol(overrideSymbol1 ?? symbol1);
+    const s2 = normalizeSymbol(overrideSymbol2 ?? symbol2);
 
     if (!s1) {
       alert("⚠️ Please enter at least one valid stock symbol!");
@@ -62,12 +129,78 @@ function Dashboard() {
       setSymbol1(s1);
       setSymbol2(s2);
       setTrigger((prev) => prev + 1);
+
+      // 🔹 Add to history (latest first)
+      setHistory((prev) => [
+        {
+          id: Date.now(),
+          symbol1: s1,
+          symbol2: s2 || null,
+          period,
+          timestamp: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+
       setIsLoading(false);
     }, 300);
   };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") handleFetch();
+  };
+
+  // Enter key handler for the SEARCH input
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      if (searchResults.length > 0) {
+        const stock = searchResults[0];
+        handleSelectStock(stock); // will auto-fetch
+      } else if (searchQuery.trim().length > 0) {
+        const querySymbol = searchQuery.trim();
+        setShowSearchDropdown(false);
+        setSearchResults([]);
+        setSearchQuery("");
+        handleFetch(querySymbol, symbol2);
+      }
+    }
+  };
+
+  // selecting a result now triggers analysis
+  const handleSelectStock = (stock) => {
+    setSearchQuery("");
+    setShowSearchDropdown(false);
+    setSearchResults([]);
+    handleFetch(stock.symbol, symbol2);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowSearchDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // direct analyze from watchlist panel
+  const handleWatchlistClick = async (symbol) => {
+    setShowWatchlistPanel(false);
+    handleFetch(symbol, symbol2);
+  };
+
+  const handleRemoveFromWatchlist = async (symbol) => {
+    await removeFromWatchlist(symbol, "guest");
+    const wl = await fetchWatchlist("guest");
+    setWatchlist(wl);
   };
 
   return (
@@ -182,18 +315,95 @@ function Dashboard() {
         .watchlist-item:hover {
           transform: translateY(-2px) scale(1.05);
         }
+        
+        .watchlist-panel {
+          position: fixed;
+          top: 0;
+          left: 80px;
+          height: 100vh;
+          width: 320px;
+          background: linear-gradient(135deg, rgba(10,11,14,0.98) 0%, rgba(15,20,25,0.98) 100%);
+          backdrop-filter: blur(20px);
+          border-right: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 8px 0 32px rgba(0,0,0,0.5);
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          z-index: 45;
+          overflow-y: auto;
+        }
+        
+        .watchlist-panel.open {
+          transform: translateX(0);
+        }
+        
+        .watchlist-stock-item {
+          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          cursor: pointer;
+        }
+        
+        .watchlist-stock-item:hover {
+          transform: translateX(4px);
+          background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .watchlist-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          backdrop-filter: blur(4px);
+          z-index: 44;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+        
+        .watchlist-overlay.open {
+          opacity: 1;
+          pointer-events: all;
+        }
+        
+        .search-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          margin-top: 8px;
+          background: linear-gradient(135deg, rgba(15,20,25,0.98) 0%, rgba(20,25,30,0.98) 100%);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 16px;
+          box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+          max-height: 400px;
+          overflow-y: auto;
+          z-index: 50;
+          animation: fadeIn 0.2s ease-out;
+        }
+        
+        .search-result-item {
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .search-result-item:last-child {
+          border-bottom: none;
+        }
+        
+        .search-result-item:hover {
+          background: rgba(16, 185, 129, 0.1);
+          transform: translateX(4px);
+        }
       `}</style>
 
       {/* Animated Background Gradients */}
       <div className="fixed inset-0 pointer-events-none opacity-60">
         <div className="absolute bottom-1/2 w-96 h-96 bg-emerald-500/30 rounded-full blur-[120px] animate-float" />
-        
-        
       </div>
 
       <div className="relative flex font-vi">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-0 h-screen w-20 border-r-2 flex flex-col items-center py-6 z-50 shadow-2xl bg-black">
+        <aside className="fixed left-0 top-0 h-screen w-20 glass-card flex flex-col items-center py-6 z-50">
           {/* Logo */}
           <div className="mb-8 icon-float cursor-pointer">
             <div className="w-9 h-9 rounded-2xl  flex items-center justify-center  overflow-hidden">
@@ -205,24 +415,232 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 flex flex-col items-center space-y-4">
             <button className="w-12 h-12 rounded-3xl glass-card flex items-center justify-center text-emerald-400 relative overflow-hidden group icon-float bg-gradient-to-br from-emerald-500/20">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <Grid3x3 className="w-5 h-5 relative z-10 group-hover:scale-110 transition-transform" />
             </button>
 
-            <button className="w-12 h-12 rounded-3xl flex items-center justify-center text-gray-500 hover:text-white glass-card group icon-float">
+            {/* 🔹 Graph icon now opens history panel */}
+            <button
+              onClick={() => setShowHistoryPanel(true)}
+              className="w-12 h-12 rounded-3xl flex items-center justify-center text-gray-500 hover:text-white glass-card group icon-float"
+            >
               <BarChart3 className="w-5 h-5 relative z-10 group-hover:scale-110 transition-transform" />
+            </button>
+
+            <button
+              onClick={() => setShowWatchlistPanel(!showWatchlistPanel)}
+              className={`w-12 h-12 rounded-3xl flex items-center justify-center glass-card group icon-float relative overflow-hidden ${
+                showWatchlistPanel
+                  ? "text-emerald-400 bg-gradient-to-br from-emerald-500/20"
+                  : "text-gray-500 hover:text-white"
+              }`}
+            >
+              {showWatchlistPanel && (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/30 to-transparent opacity-100 transition-opacity duration-300" />
+              )}
+              <Star
+                className="w-5 h-5 relative z-10 group-hover:scale-110 transition-transform"
+                fill={showWatchlistPanel ? "currentColor" : "none"}
+              />
+              {/* 🔹 dot only, no 1/2/3 number */}
+              {watchlist.length > 0 && (
+                <div className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full" />
+              )}
             </button>
           </nav>
 
-          {/* Settings */}
           <button className="w-12 h-12 rounded-2xl flex items-center justify-center text-gray-100 hover:text-white glass-card group icon-float relative">
             <Bell className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform" />
             <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-scale-pulse" />
           </button>
         </aside>
+
+        {/* Overlay for both panels */}
+        <div
+          className={`watchlist-overlay ${
+            showWatchlistPanel || showHistoryPanel ? "open" : ""
+          }`}
+          onClick={() => {
+            setShowWatchlistPanel(false);
+            setShowHistoryPanel(false);
+          }}
+        />
+
+        {/* Watchlist Panel */}
+        <div className={`watchlist-panel ${showWatchlistPanel ? "open" : ""}`}>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-emerald-400" fill="currentColor" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white font-vi4">
+                    Watchlist
+                  </h2>
+                  <p className="text-xs text-gray-500 font-vi">
+                    {watchlist.length} stocks tracked
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWatchlistPanel(false)}
+                className="w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {symbol1 && (
+              <button
+                onClick={async () => {
+                  await addToWatchlist(symbol1, "guest");
+                  const wl = await fetchWatchlist("guest");
+                  setWatchlist(wl);
+                }}
+                className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 hover:from-emerald-500/20 hover:to-cyan-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl text-sm text-emerald-400 transition-all flex items-center justify-center gap-2 backdrop-blur-xl font-vi"
+              >
+                <Plus className="w-4 h-4" />
+                Add {symbol1} to Watchlist
+              </button>
+            )}
+
+            <div className="space-y-2">
+              {watchlist.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-8 h-8 text-emerald-400/50" />
+                  </div>
+                  <p className="text-gray-500 text-sm font-vi">
+                    Your watchlist is empty
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1 font-vi">
+                    Add stocks to track them
+                  </p>
+                </div>
+              ) : (
+                watchlist.map((item, i) => (
+                  <div
+                    key={i}
+                    className="watchlist-stock-item glass-card rounded-xl p-4 group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => handleWatchlistClick(item.symbol)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
+                            <span className="text-sm font-bold text-emerald-400 font-vi">
+                              {item.symbol.substring(0, 2)}
+                            </span>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold text-white font-vi3">
+                              {item.symbol}
+                            </h3>
+                            <p className="text-xs text-gray-500 font-vi">
+                              Click to analyze
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFromWatchlist(item.symbol);
+                        }}
+                        className="w-8 h-8 rounded-lg glass-card flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {watchlist.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <p className="text-xs text-gray-500 text-center font-vi">
+                  Click any stock to start analysis
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 🔹 History Panel (right side) */}
+        <div
+          className={`fixed top-0 right-0 h-screen w-80 bg-gradient-to-br from-[#0a0b0e]/95 to-slate-900/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl shadow-black/60 transform transition-transform duration-300 z-[46] ${
+            showHistoryPanel ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500/20 to-cyan-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-sky-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white font-vi4">
+                    Analysis History
+                  </h2>
+                  <p className="text-xs text-gray-500 font-vi">
+                    {history.length} runs logged
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHistoryPanel(false)}
+                className="w-8 h-8 rounded-full glass-card flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {history.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-sm font-vi">
+                  No history yet
+                </p>
+                <p className="text-gray-600 text-xs mt-1 font-vi">
+                  Run an analysis to see it here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {history.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setShowHistoryPanel(false);
+                      handleFetch(item.symbol1, item.symbol2 || undefined);
+                    }}
+                    className="glass-card rounded-xl p-4 cursor-pointer hover:bg-sky-500/10 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <h3 className="text-sm font-semibold text-white font-vi3">
+                          {item.symbol1}
+                          {item.symbol2 ? ` · ${item.symbol2}` : ""}
+                        </h3>
+                        <p className="text-xs text-gray-500 font-vi mt-0.5">
+                          Period: {item.period}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-600 font-vi">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Main Content */}
         <div className="flex-1 ml-20">
@@ -230,39 +648,88 @@ function Dashboard() {
           <header className="sticky top-0 z-40 ">
             <div className="px-8 py-4">
               <div className="flex items-center justify-between">
-                {/* Left: Title */}
                 <div className="flex items-center space-x-3">
                   <h1 className="text-2xl font-bold text-white animate-fadeIn font-vi4">
                     Dashboard
                   </h1>
                 </div>
 
-                {/* Right: Wallet Info & Actions */}
                 <div className="flex items-center space-x-4">
-                  {/* Wallet Selector */}
                   <div className="flex items-center space-x-3 px-4 py-2 rounded-full  relative overflow-hidden">
-                    
                     <div className="flex items-center space-x-2 relative z-10">
                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-scale-pulse" />
-                      <span className="text-sm text-gray-300 font-vi">Main Portfolio</span>
+                      <span className="text-sm text-gray-300 font-vi">
+                        Main Portfolio
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2 ml-6 relative z-10">
-                      <div className="w-2 h-2 bg-rose-400 rounded-full animate-scale-pulse" style={{ animationDelay: "0.5s" }} />
-                      <span className="text-sm text-gray-300 font-vi">All Stocks (08)</span>
+                      <div
+                        className="w-2 h-2 bg-rose-400 rounded-full animate-scale-pulse"
+                        style={{ animationDelay: "0.5s" }}
+                      />
+                      <span className="text-sm text-gray-300 font-vi">
+                        All Stocks (08)
+                      </span>
                     </div>
                   </div>
 
-                  {/* Search */}
-                  <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-emerald-400 transition-colors" />
+                  {/* Search with Dropdown */}
+                  <div className="relative group" ref={searchInputRef}>
+                    <Search
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
+                        isSearching
+                          ? "text-emerald-400 animate-pulse"
+                          : "text-gray-400"
+                      } group-focus-within:text-emerald-400`}
+                    />
                     <input
                       type="text"
+                      value={searchQuery}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      onFocus={() =>
+                        searchResults.length > 0 &&
+                        setShowSearchDropdown(true)
+                      }
+                      onKeyDown={handleSearchKeyDown}
                       placeholder="Search stocks..."
                       className="w-64 pl-10 pr-4 py-2 glass-card rounded-full text-sm text-white placeholder-gray-500 focus:outline-none input-glow transition-all"
                     />
+
+                    {/* Search Dropdown */}
+                    {showSearchDropdown && searchResults.length > 0 && (
+                      <div className="search-dropdown">
+                        {searchResults.map((stock, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectStock(stock)}
+                            className="search-result-item"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-sm font-semibold text-white">
+                                  {stock.symbol}
+                                </h4>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {stock.displayName}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs text-emerald-400 font-medium">
+                                  {stock.exchange}
+                                </span>
+                                {stock.sector && (
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {stock.sector}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Action Button */}
                   <button className="px-4 py-2 bg-gradient-to-r from-emerald-900 to-neutral-900 rounded-3xl text-white shadow-xl relative overflow-hidden group ">
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <span className="relative z-10">Add Stock</span>
@@ -280,8 +747,8 @@ function Dashboard() {
                 {/* Stock Input Pills - Larger */}
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-400 font-semibold font-vi2">Your Stocks</span>
-                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-scale-pulse" />
+                    <span className="text-xs text-gray-500 font-medium font-vi">Your Stocks</span>
+                    <div className="w-1 h-1 bg-gray-700 rounded-full" />
                   </div>
 
                   <div className="flex items-center space-x-3">
@@ -317,15 +784,15 @@ function Dashboard() {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`tab-item px-6 py-3 rounded-xl text-base font-semibold transition-all relative overflow-hidden flex items-center gap-2 ${
-                          isActive ? "text-white scale-105" : "text-gray-400 hover:text-white"
+                        className={`tab-item px-4 py-1.5 rounded-full text-sm font-medium transition-all relative overflow-hidden flex items-center gap-2 ${
+                          isActive ? "text-white" : "text-gray-400 hover:text-white"
                         }`}
                       >
                         {isActive && (
                           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-600 to-cyan-600 rounded-xl shadow-lg shadow-emerald-500/50" />
                         )}
-                        <Icon className={`w-5 h-5 relative z-10 ${isActive ? "animate-bounce-subtle" : ""}`} />
-                        <span className="relative z-10 font-vi2">{tab.label}</span>
+                        <Icon className={`w-4 h-4 relative z-10 ${isActive ? "animate-bounce-subtle" : ""}`} />
+                        <span className="relative z-10">{tab.label}</span>
                       </button>
                     );
                   })}
@@ -338,19 +805,27 @@ function Dashboard() {
                     onChange={(e) => setPeriod(e.target.value)}
                     className="px-5 py-3 glass-card rounded-xl text-base font-medium text-gray-200 focus:outline-none input-glow cursor-pointer hover:border-white/40 transition-all border-2 border-white/10 bg-gradient-to-br from-white/10 to-white/5 shadow-lg"
                   >
-                    <option value="1mo" className="bg-gray-900">1 Month</option>
-                    <option value="3mo" className="bg-gray-900">3 Months</option>
-                    <option value="6mo" className="bg-gray-900">6 Months</option>
-                    <option value="1y" className="bg-gray-900">1 Year</option>
+                    <option value="1mo" className="bg-gray-900">
+                      1 Month
+                    </option>
+                    <option value="3mo" className="bg-gray-900">
+                      3 Months
+                    </option>
+                    <option value="6mo" className="bg-gray-900">
+                      6 Months
+                    </option>
+                    <option value="1y" className="bg-gray-900">
+                      1 Year
+                    </option>
                   </select>
 
                   <button
-                    onClick={handleFetch}
+                    onClick={() => handleFetch()}
                     disabled={isLoading}
                     className="px-8 py-3 glass-card hover:bg-white/20 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-2 border-emerald-500/50 hover:border-emerald-400 rounded-xl text-base font-bold text-white transition-all disabled:opacity-50 relative overflow-hidden group shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 btn-glow"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/30 to-cyan-400/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative z-10 font-vi2">{isLoading ? "Fetching..." : "Fetch Data"}</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="relative z-10">{isLoading ? "Gettin' it..." : "Fetch Data"}</span>
                   </button>
                 </div>
               </div>
@@ -361,11 +836,13 @@ function Dashboard() {
           {watchlist.length > 0 && (
             <div className="px-8 py-3 border-b border-white/10 bg-white/[0.02] backdrop-blur-xl">
               <div className="flex items-center space-x-3 overflow-x-auto">
-                <span className="text-xs text-gray-500 font-medium shrink-0">Quick Access:</span>
+                <span className="text-xs text-gray-500 font-medium shrink-0">
+                  Quick Access:
+                </span>
                 {watchlist.map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => setSymbol1(item.symbol)}
+                    onClick={() => handleFetch(item.symbol, symbol2)}
                     className="watchlist-item px-3 py-1 glass-card hover:bg-emerald-500/20 hover:border-emerald-500/40 rounded-lg text-xs text-gray-300 hover:text-white transition-all whitespace-nowrap"
                   >
                     {item.symbol}
@@ -400,10 +877,14 @@ function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2 font-vi3">Ready to Analyze?</h3>
-                <p className="text-gray-500 mb-6 font-vi">Enter stock symbols and click "Fetch Data" to begin</p>
+                <h3 className="text-xl font-semibold text-white mb-2 font-vi3">
+                  Ready to Analyze?
+                </h3>
+                <p className="text-gray-500 mb-6 font-vi">
+                  Enter stock symbols and click "Fetch Data" to begin
+                </p>
                 <button
-                  onClick={handleFetch}
+                  onClick={() => handleFetch()}
                   className="px-6 py-2.5 bg-gradient-to-r from-emerald-900 to-emerald-900 rounded-full text-white font-medium shadow-sm shadow-emerald-300/40 relative overflow-hidden group btn-glow"
                 >
                   <div className="absolute inset-0 bg-gradient-to-b from-emerald-600 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -414,7 +895,9 @@ function Dashboard() {
               <div className="flex items-center justify-center h-[calc(100vh-300px)]">
                 <div className="flex flex-col items-center space-y-4">
                   <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-[spin_1s_linear_infinite]" />
-                  <p className="text-emerald-400 font-medium animate-pulse">Fetchin' market data...</p>
+                  <p className="text-emerald-400 font-medium animate-pulse">
+                    Fetchin' market data...
+                  </p>
                 </div>
               </div>
             ) : activeTab === "technical" ? (
@@ -446,7 +929,9 @@ function Dashboard() {
               <div className="flex items-center space-x-2">
                 <span>Educational purposes only</span>
                 <span>•</span>
-                <span className="gradient-text font-semibold animate-pulse">The Lit Coders</span>
+                <span className="gradient-text font-semibold animate-pulse">
+                  The Lit Coders
+                </span>
               </div>
             </div>
           </footer>
