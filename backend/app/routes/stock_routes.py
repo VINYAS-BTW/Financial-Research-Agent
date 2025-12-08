@@ -6,8 +6,63 @@ from ..models.stock_model import IndicatorResult
 from ..utils.cache import get_cached, set_cached
 import httpx
 from ..config import settings
+from motor.motor_asyncio import AsyncIOMotorClient
+import re
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
+
+# MongoDB connection
+mongo_client = AsyncIOMotorClient(settings.MONGO_URI)
+db = mongo_client[settings.MONGO_DB_NAME]
+stocks_collection = db["Stocks"]
+
+
+@router.get("/search")
+async def search_stocks(q: str = Query(..., min_length=1, max_length=50)):
+    """
+    Search stocks from MongoDB by symbol, name, or search terms.
+    Returns matching stocks sorted by relevance.
+    """
+    try:
+        # Sanitize search query
+        search_query = q.strip().upper()
+        search_query_lower = q.strip().lower()
+        
+        # Build MongoDB query with multiple search criteria
+        query = {
+            "$or": [
+                {"symbol": {"$regex": f"^{re.escape(search_query)}", "$options": "i"}},
+                {"name": {"$regex": re.escape(q.strip()), "$options": "i"}},
+                {"displayName": {"$regex": re.escape(q.strip()), "$options": "i"}},
+                {"searchTerms": {"$regex": re.escape(search_query_lower), "$options": "i"}}
+            ]
+        }
+        
+        # Execute search with limit
+        cursor = stocks_collection.find(query).limit(10)
+        results = await cursor.to_list(length=10)
+        
+        # Format results
+        formatted_results = []
+        for stock in results:
+            formatted_results.append({
+                "symbol": stock.get("symbol", ""),
+                "name": stock.get("name", ""),
+                "displayName": stock.get("displayName", stock.get("name", "")),
+                "exchange": stock.get("exchange", ""),
+                "sector": stock.get("sector", "")
+            })
+        
+        return {
+            "success": True,
+            "query": q,
+            "count": len(formatted_results),
+            "results": formatted_results
+        }
+        
+    except Exception as e:
+        print(f"❌ Search Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 @router.get("/price_series/{symbol}")

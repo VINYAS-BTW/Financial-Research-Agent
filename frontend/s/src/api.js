@@ -2,6 +2,31 @@ import axios from "axios";
 
 export const API_BASE = "http://localhost:8000/api";
 
+// ✅ Search stocks from MongoDB
+export async function searchStocks(query) {
+  try {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    const res = await axios.get(`${API_BASE}/stocks/search`, {
+      params: { q: query.trim() },
+    });
+
+    console.log("🔍 Search API Response:", res.data);
+
+    if (res.data.success && Array.isArray(res.data.results)) {
+      return res.data.results;
+    } else {
+      console.warn("⚠️ Invalid search response:", res.data);
+      return [];
+    }
+  } catch (error) {
+    console.error("❌ Search API Error:", error.message);
+    return [];
+  }
+}
+
 // ✅ Fetch stock data (GET request)
 export async function fetchStockData(symbol, period = "3mo") {
   try {
@@ -41,6 +66,7 @@ export async function fetchNewsData(symbol) {
     return [];
   }
 }
+
 // ✅ Fetch watchlist
 export async function fetchWatchlist(userId = "guest") {
   try {
