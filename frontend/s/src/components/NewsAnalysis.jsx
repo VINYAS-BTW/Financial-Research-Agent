@@ -11,55 +11,57 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   const [error2, setError2] = useState(null);
 
   useEffect(() => {
-    console.log(" NewsAnalysis useEffect triggered", { symbol1, symbol2, trigger });
-    
     async function loadNews() {
-      try {
-        if (!symbol1) {
-          console.log(" No symbol1 provided");
-          return;
-        }
+      if (!symbol1) return;
 
-        setLoading1(true);
-        setError1(null);
-        console.log("📥 Loading news for symbol1:", symbol1);
+      // Load both news in parallel
+      const loadPromises = [];
 
-        const n1 = await fetchNewsData(symbol1);
-        console.log("✅ News1 loaded:", n1, "articles");
-        
-        // Handle different response formats
-        const articles1 = Array.isArray(n1) ? n1 : (n1?.articles || n1?.data || []);
-        console.log("📰 Processed articles1:", articles1.length, "items");
-        setNews1(articles1);
-      } catch (err) {
-        console.error("❌ Error fetching news1:", err);
-        setError1("Failed to load news for " + symbol1);
-      } finally {
-        setLoading1(false);
-      }
-
-      if (symbol2 && symbol2 !== symbol1) {
+      // Load news 1
+      const loadNews1 = async () => {
         try {
-          setLoading2(true);
-          setError2(null);
-          console.log("📥 Loading news for symbol2:", symbol2);
-
-          const n2 = await fetchNewsData(symbol2);
-          console.log("✅ News2 loaded:", n2, "articles");
-          
-          // Handle different response formats
-          const articles2 = Array.isArray(n2) ? n2 : (n2?.articles || n2?.data || []);
-          console.log("📰 Processed articles2:", articles2.length, "items");
-          setNews2(articles2);
+          setLoading1(true);
+          setError1(null);
+          const n1 = await fetchNewsData(symbol1);
+          const articles1 = Array.isArray(n1) ? n1 : (n1?.articles || n1?.data || []);
+          setNews1(articles1);
         } catch (err) {
-          console.error("❌ Error fetching news2:", err);
-          setError2("Failed to load news for " + symbol2);
+          console.error("Error fetching news1:", err);
+          setError1("Failed to load news for " + symbol1);
         } finally {
-          setLoading2(false);
+          setLoading1(false);
         }
-      } else {
-        setNews2([]);
+      };
+
+      // Load news 2 (if provided)
+      const loadNews2 = async () => {
+        if (symbol2 && symbol2 !== symbol1) {
+          try {
+            setLoading2(true);
+            setError2(null);
+            const n2 = await fetchNewsData(symbol2);
+            const articles2 = Array.isArray(n2) ? n2 : (n2?.articles || n2?.data || []);
+            setNews2(articles2);
+          } catch (err) {
+            console.error("Error fetching news2:", err);
+            setError2("Failed to load news for " + symbol2);
+          } finally {
+            setLoading2(false);
+          }
+        } else {
+          setNews2([]);
+          setError2(null);
+        }
+      };
+
+      // Load both in parallel
+      loadPromises.push(loadNews1());
+      if (symbol2 && symbol2 !== symbol1) {
+        loadPromises.push(loadNews2());
       }
+
+      // Wait for all to complete
+      await Promise.all(loadPromises);
     }
 
     loadNews();
@@ -129,7 +131,6 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
 
 
   const renderNews = (news, loading, error, symbol) => {
-    console.log(`🎨 Rendering news for ${symbol}:`, { loading, error, newsCount: news.length });
     
     if (loading) {
       return (

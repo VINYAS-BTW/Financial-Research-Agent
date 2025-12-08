@@ -46,6 +46,7 @@ function Dashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef(null);
   const searchInputRef = useRef(null);
+  const searchAbortControllerRef = useRef(null);
 
   useEffect(() => {
     async function loadWatchlist() {
@@ -76,27 +77,79 @@ function Dashboard() {
     }
   }, [history]);
 
-  // Handle search with debouncing
+  // Handle search with debouncing and request cancellation
   const handleSearch = async (query) => {
+    const trimmedQuery = query.trim();
     setSearchQuery(query);
 
-    if (query.trim().length === 0) {
+    if (trimmedQuery.length === 0) {
       setSearchResults([]);
       setShowSearchDropdown(false);
+      setIsSearching(false);
+      // Cancel any pending request
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+        searchAbortControllerRef.current = null;
+      }
       return;
     }
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+    // ✅ Cancel previous request if still pending
+    if (searchAbortControllerRef.current) {
+      searchAbortControllerRef.current.abort();
     }
 
+    // Show dropdown immediately if query is long enough (for better UX)
+    if (trimmedQuery.length >= 2) {
+      setShowSearchDropdown(true);
+    }
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    // Show loading state immediately for better UX
+    setIsSearching(true);
+
+    // ✅ OPTIMIZED: Reduced debounce from 300ms to 200ms for faster response
     searchTimeoutRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      const results = await searchStocks(query);
-      setSearchResults(results);
-      setShowSearchDropdown(results.length > 0);
-      setIsSearching(false);
-    }, 300);
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      searchAbortControllerRef.current = abortController;
+
+      try {
+        const results = await searchStocks(trimmedQuery, abortController.signal);
+        
+        // Check if request was aborted
+        if (abortController.signal.aborted) {
+          return;
+        }
+        
+        const hasResults = (results || []).length > 0;
+        setSearchResults(results || []);
+        // Keep dropdown open if we have results or query is meaningful
+        setShowSearchDropdown(hasResults || trimmedQuery.length >= 2);
+      } catch (error) {
+        // Ignore abort errors
+        if (error.name === 'AbortError' || error.name === 'CanceledError' || abortController.signal.aborted) {
+          return;
+        }
+        console.error("❌ Search error:", error);
+        setSearchResults([]);
+        // Still show dropdown to display error/empty state if query is meaningful
+        setShowSearchDropdown(trimmedQuery.length >= 2);
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsSearching(false);
+        }
+        // Clear abort controller if this was the active request
+        if (searchAbortControllerRef.current === abortController) {
+          searchAbortControllerRef.current = null;
+        }
+      }
+    }, 200);  // Reduced from 300ms to 200ms
   };
 
   const normalizeSymbol = (s) => {
@@ -155,25 +208,74 @@ function Dashboard() {
     if (e.key === "Enter") {
       e.preventDefault();
 
+      // Clear any pending search timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+
+      // Check if Ctrl/Cmd is pressed to add to symbol2
+      const addToSymbol2 = e.ctrlKey || e.metaKey;
+
+      // If we have search results, use the first one
       if (searchResults.length > 0) {
         const stock = searchResults[0];
-        handleSelectStock(stock); // will auto-fetch
+        handleSelectStock(stock, addToSymbol2); // will auto-fetch
       } else if (searchQuery.trim().length > 0) {
-        const querySymbol = searchQuery.trim();
-        setShowSearchDropdown(false);
-        setSearchResults([]);
-        setSearchQuery("");
-        handleFetch(querySymbol, symbol2);
+        // If no results but query exists, try to use it as a symbol
+        // Wait a bit for search to complete if it's still running
+        if (isSearching) {
+          // Wait for search to complete
+          setTimeout(() => {
+            if (searchResults.length > 0) {
+              handleSelectStock(searchResults[0], addToSymbol2);
+            } else {
+              const querySymbol = searchQuery.trim();
+              setShowSearchDropdown(false);
+              setSearchResults([]);
+              setSearchQuery("");
+              if (addToSymbol2) {
+                handleFetch(symbol1, querySymbol);
+              } else {
+                handleFetch(querySymbol, symbol2);
+              }
+            }
+          }, 100);
+        } else {
+          const querySymbol = searchQuery.trim();
+          setShowSearchDropdown(false);
+          setSearchResults([]);
+          setSearchQuery("");
+          if (addToSymbol2) {
+            handleFetch(symbol1, querySymbol);
+          } else {
+            handleFetch(querySymbol, symbol2);
+          }
+        }
       }
+    } else if (e.key === "Escape") {
+      // Close dropdown on Escape
+      setShowSearchDropdown(false);
     }
   };
 
   // selecting a result now triggers analysis
-  const handleSelectStock = (stock) => {
+  const handleSelectStock = (stock, addToSymbol2 = false) => {
+    if (!stock || !stock.symbol) {
+      return;
+    }
+    
     setSearchQuery("");
     setShowSearchDropdown(false);
     setSearchResults([]);
-    handleFetch(stock.symbol, symbol2);
+    
+    if (addToSymbol2) {
+      // Add to symbol2 for comparison
+      handleFetch(symbol1, stock.symbol);
+    } else {
+      // Set as symbol1 (default behavior)
+      handleFetch(stock.symbol, symbol2);
+    }
   };
 
   // Close dropdown when clicking outside
@@ -612,7 +714,7 @@ function Dashboard() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-180px)] pr-2">
                 {history.map((item) => (
                   <div
                     key={item.id}
@@ -687,12 +789,13 @@ function Dashboard() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => handleSearch(e.target.value)}
-                      onFocus={() =>
-                        searchResults.length > 0 &&
-                        setShowSearchDropdown(true)
-                      }
+                      onFocus={() => {
+                        if (searchResults.length > 0) {
+                          setShowSearchDropdown(true);
+                        }
+                      }}
                       onKeyDown={handleSearchKeyDown}
-                      placeholder="Search stocks..."
+                      placeholder="Search by name or symbol..."
                       className="w-64 pl-10 pr-4 py-2 glass-card rounded-full text-sm text-white placeholder-gray-500 focus:outline-none input-glow transition-all"
                     />
 
@@ -701,32 +804,83 @@ function Dashboard() {
                       <div className="search-dropdown">
                         {searchResults.map((stock, idx) => (
                           <div
-                            key={idx}
-                            onClick={() => handleSelectStock(stock)}
-                            className="search-result-item"
+                            key={stock.symbol || idx}
+                            className="search-result-item group"
                           >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="text-sm font-semibold text-white">
-                                  {stock.symbol}
+                            <div 
+                              className="flex items-center justify-between cursor-pointer"
+                              onClick={() => handleSelectStock(stock, false)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                handleSelectStock(stock, true);
+                              }}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-semibold text-white truncate">
+                                  {stock.symbol || "N/A"}
                                 </h4>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                  {stock.displayName}
+                                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                  {stock.displayName || stock.name || "No name available"}
                                 </p>
                               </div>
-                              <div className="text-right">
-                                <span className="text-xs text-emerald-400 font-medium">
-                                  {stock.exchange}
-                                </span>
-                                {stock.sector && (
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    {stock.sector}
-                                  </p>
-                                )}
+                              <div className="flex items-center gap-2 ml-4">
+                                <div className="text-right flex-shrink-0">
+                                  {stock.exchange && (
+                                    <span className="text-xs text-emerald-400 font-medium">
+                                      {stock.exchange}
+                                    </span>
+                                  )}
+                                  {stock.sector && (
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {stock.sector}
+                                    </p>
+                                  )}
+                                </div>
+                                {/* Action buttons */}
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectStock(stock, false);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-md transition-colors"
+                                    title="Set as Stock 1"
+                                  >
+                                    1
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectStock(stock, true);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-md transition-colors"
+                                    title="Add to Stock 2 (for comparison)"
+                                  >
+                                    2
+                                  </button>
+                                </div>
                               </div>
+                            </div>
+                            <div className="text-[10px] text-gray-600 mt-1 px-1 opacity-0 group-hover:opacity-70 transition-opacity">
+                              Click = Stock 1 • Right-click or "2" = Stock 2 • Ctrl+Enter = Stock 2
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+                    
+                    {/* Show message when searching */}
+                    {isSearching && searchQuery.trim().length > 0 && !showSearchDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 p-3 glass-card rounded-xl text-center z-50">
+                        <p className="text-sm text-gray-400">Searching...</p>
+                      </div>
+                    )}
+                    
+                    {/* Show message when no results */}
+                    {!isSearching && searchQuery.trim().length >= 2 && searchResults.length === 0 && showSearchDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 p-3 glass-card rounded-xl text-center z-50">
+                        <p className="text-sm text-gray-400">No results found</p>
+                        <p className="text-xs text-gray-500 mt-1">Try searching by symbol or company name</p>
                       </div>
                     )}
                   </div>
