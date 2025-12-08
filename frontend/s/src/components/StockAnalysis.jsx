@@ -13,22 +13,16 @@ const fetchStockData = async (symbol, period) => {
     }
     
     const result = await response.json();
-    
-    console.log("📊 Stock API Response:", result);
 
-    // Check for error response from backend
     if (!result.success) {
       const errorMsg = result.error || "Failed to fetch stock data";
-      console.error("❌ Stock API Error:", errorMsg);
       throw new Error(errorMsg);
     }
 
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
       return result.data;
-    } else {
-      console.warn("⚠️ No data available for:", symbol);
-      throw new Error(`No data available for ${symbol}`);
     }
+    throw new Error(`No data available for ${symbol}`);
   } catch (error) {
     console.error("❌ Stock API Error:", error.message);
     throw error;
@@ -47,41 +41,54 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
     async function loadData() {
       if (!symbol1) return;
 
+      // ✅ OPTIMIZED: Load both stocks in parallel for faster loading
+      const loadPromises = [];
+
       // Load stock 1
-      try {
-        setLoading1(true);
-        setError1(null);
-        const d1 = await fetchStockData(symbol1, period);
-        setData1(d1);
-      } catch (err) {
-        console.error("❌ Error loading stock1:", err.message);
-        setError1(err.message || `Failed to fetch data for ${symbol1}`);
-        setData1(null);
-      } finally {
-        setLoading1(false);
+      const loadStock1 = async () => {
+        try {
+          setLoading1(true);
+          setError1(null);
+          const d1 = await fetchStockData(symbol1, period);
+          setData1(d1);
+        } catch (err) {
+          console.error("Error loading stock1:", err.message);
+          setError1(err.message || `Failed to fetch data for ${symbol1}`);
+          setData1(null);
+        } finally {
+          setLoading1(false);
+        }
+      };
+
+      // Load stock 2 (if provided)
+      const loadStock2 = async () => {
+        if (symbol2 && symbol2.trim() && symbol2 !== symbol1) {
+          try {
+            setLoading2(true);
+            setError2(null);
+            const d2 = await fetchStockData(symbol2, period);
+            setData2(d2);
+          } catch (err) {
+            console.error("Error loading stock2:", err.message);
+            setError2(err.message || `Failed to fetch data for ${symbol2}`);
+            setData2(null);
+          } finally {
+            setLoading2(false);
+          }
+        } else {
+          setData2(null);
+          setError2(null);
+        }
+      };
+
+      // Load both in parallel
+      loadPromises.push(loadStock1());
+      if (symbol2 && symbol2.trim() && symbol2 !== symbol1) {
+        loadPromises.push(loadStock2());
       }
 
-      // Load stock 2 (if provided) - with a small delay to avoid rate limiting
-      if (symbol2 && symbol2.trim() && symbol2 !== symbol1) {
-        try {
-          // Small delay to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          setLoading2(true);
-          setError2(null);
-          const d2 = await fetchStockData(symbol2, period);
-          setData2(d2);
-        } catch (err) {
-          console.error("❌ Error loading stock2:", err.message);
-          setError2(err.message || `Failed to fetch data for ${symbol2}`);
-          setData2(null);
-        } finally {
-          setLoading2(false);
-        }
-      } else {
-        setData2(null);
-        setError2(null);
-      }
+      // Wait for all to complete
+      await Promise.all(loadPromises);
     }
 
     loadData();

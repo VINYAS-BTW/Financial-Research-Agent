@@ -15,8 +15,8 @@ def filter_relevant_articles(articles: List[Dict[str, Any]], base_ticker: str, f
     """
     Filter articles to keep only those actually related to the stock.
     
-    Checks if the ticker/company name appears in title or description,
-    and ensures financial/stock-related keywords are present.
+    Balanced filtering: Since NewsAPI already filters by query, we use
+    a more lenient approach that still ensures relevance.
     """
     if not articles:
         return []
@@ -25,7 +25,17 @@ def filter_relevant_articles(articles: List[Dict[str, Any]], base_ticker: str, f
     relevant_keywords = [
         "stock", "share", "equity", "trading", "price", "earnings", 
         "revenue", "profit", "investor", "market", "NSE", "BSE",
-        "dividend", "IPO", "quarterly", "results", "financial"
+        "dividend", "IPO", "quarterly", "results", "financial", "shares",
+        "market cap", "valuation", "analyst", "forecast", "outlook",
+        "quarter", "Q1", "Q2", "Q3", "Q4", "FY", "fiscal", "company",
+        "corporate", "business", "sector", "industry"
+    ]
+    
+    # Expanded exclusion keywords for non-stock news
+    exclude_keywords = [
+        "weather", "sports", "entertainment", "recipe", "travel", "movie",
+        "music", "celebrity", "gossip", "fashion", "food", "restaurant",
+        "hotel", "tourism", "game", "match", "tournament", "league"
     ]
     
     filtered = []
@@ -35,22 +45,36 @@ def filter_relevant_articles(articles: List[Dict[str, Any]], base_ticker: str, f
         description = (article.get("description") or "").upper()
         content = f"{title} {description}"
         
-        # Must contain the ticker symbol
-        if base_upper not in content:
-            continue
+        # Check if ticker appears in title or description
+        ticker_in_title = base_upper in title
+        ticker_in_desc = base_upper in description
+        ticker_present = ticker_in_title or ticker_in_desc
         
-        # Must contain at least one financial/stock-related keyword
+        # Since NewsAPI already filtered by query with ticker + financial terms,
+        # we trust the results more but still do basic filtering
         has_financial_keyword = any(keyword.upper() in content for keyword in relevant_keywords)
-        if not has_financial_keyword:
-            continue
         
-        # Exclude articles that are clearly not about the stock
-        # (e.g., if ticker appears but in unrelated context)
-        exclude_keywords = ["weather", "sports", "entertainment", "recipe", "travel"]
+        # Exclude articles that are clearly not about the stock (non-financial content)
         if any(exclude in content.lower() for exclude in exclude_keywords):
             continue
         
-        filtered.append(article)
+        # Stricter filtering: Require ticker OR strong financial context
+        # If ticker is present, definitely include
+        if ticker_present:
+            filtered.append(article)
+        # If no ticker, require at least 2 financial keywords to ensure relevance
+        elif has_financial_keyword:
+            # Count financial keywords to ensure strong relevance
+            financial_count = sum(1 for keyword in relevant_keywords if keyword.upper() in content)
+            if financial_count >= 2:
+                filtered.append(article)
+        # Otherwise skip - not relevant enough
+    
+    # Sort by relevance: articles with ticker in title come first
+    filtered.sort(key=lambda a: (
+        base_upper not in (a.get("title") or "").upper(),  # False (0) if in title = higher priority
+        -len(a.get("title") or "")  # Shorter titles = more focused = higher priority
+    ))
     
     return filtered
 
@@ -68,16 +92,16 @@ def fetch_financial_news(symbol: str, api_key: str) -> Tuple[List[Dict[str, Any]
 
     base = symbol.replace(".NS", "").replace(".BO", "").strip()
     
-    # ✅ More specific query focused on stock/financial news
-    # Use exact phrase matching and financial keywords
+    # ✅ Balanced query: Ticker with financial context
+    # This ensures we get relevant stock news, not random articles
     if symbol.endswith(".NS") or symbol.endswith(".BO"):
-        # For Indian stocks: focus on stock ticker + financial terms + Indian market context
-        query = f'"{base}" AND (stock OR shares OR equity OR NSE OR BSE OR "stock price" OR "share price" OR earnings OR revenue OR profit OR "market cap" OR "trading" OR "investor") AND (India OR Indian OR Mumbai)'
+        # For Indian stocks: ticker + financial terms
+        query = f'"{base}" AND (stock OR shares OR equity OR earnings OR revenue OR profit OR trading OR investor OR NSE OR BSE OR company OR corporate OR "stock price" OR "share price")'
     else:
-        # For other stocks: focus on stock ticker + financial terms
-        query = f'"{base}" AND (stock OR shares OR equity OR "stock price" OR "share price" OR earnings OR revenue OR profit OR "market cap" OR "trading" OR "investor")'
+        # For other stocks: ticker + financial terms
+        query = f'"{base}" AND (stock OR shares OR equity OR earnings OR revenue OR profit OR trading OR investor OR company OR corporate OR "stock price" OR "share price")'
     
-    logger.info(f"🔍 Searching NewsAPI for: {query}")
+    logger.info(f"🔍 Searching NewsAPI for: {query} (with financial domain filter)")
 
     url = "https://newsapi.org/v2/everything"
     params = {
@@ -86,8 +110,11 @@ def fetch_financial_news(symbol: str, api_key: str) -> Tuple[List[Dict[str, Any]
         "sortBy": "publishedAt",
         "pageSize": 100,  # Get more to filter later
         "apiKey": api_key,
-        "domains": "economictimes.indiatimes.com,livemint.com,moneycontrol.com,business-standard.com,financialexpress.com,bloombergquint.com,reuters.com,bloomberg.com,cnbc.com",  # Focus on financial news sources
+        "domains": "economictimes.indiatimes.com,livemint.com,moneycontrol.com,business-standard.com,financialexpress.com,bloombergquint.com,reuters.com,bloomberg.com,cnbc.com,financialexpress.com",  # Focus on financial news sources
     }
+    
+    # If no results with domains filter, try without domain restriction (fallback)
+    # But we'll start with domains for better quality
 
     try:
         res = requests.get(url, params=params, timeout=15)

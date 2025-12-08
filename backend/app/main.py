@@ -36,20 +36,69 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # ---------------- STOCK ROUTE ----------------
 @app.get("/api/stock-data")
 async def get_stock_data(symbol: str, period: str = "3mo"):
+    # ✅ Add caching for faster loading (with error handling)
+    cache_available = False
+    cache_key = f"stock_data:{symbol}:{period}"
+    
+    try:
+        from .utils.cache import get_cached, set_cached
+        cache_available = True
+        
+        # Check cache first (ignore cache errors)
+        try:
+            cached = await get_cached(cache_key)
+            if cached:
+                return cached
+        except Exception as cache_err:
+            # Cache failed, continue without cache
+            print(f"⚠️ Cache read error (continuing): {cache_err}")
+            cache_available = False
+    except ImportError:
+        # Cache not available, continue without it
+        cache_available = False
+    
+    # Fetch data
     data, error = await fetch_stock_data(symbol, period)
     if error:
         return {"success": False, "error": error}
 
-    return {
+    result = {
         "success": True,
         "data": data["data"],
         "metrics": data.get("metrics", {})
     }
+    
+    # Try to cache (ignore errors)
+    if cache_available:
+        try:
+            await set_cached(cache_key, result, expire=300)
+        except Exception:
+            pass  # Cache failed, but we still return the data
+    
+    return result
 
 
 # ---------------- NEWS ROUTE ----------------
 @app.get("/api/news")
 async def get_news(symbol: str):
+    # ✅ Add caching for faster loading (with error handling)
+    cache_key = None
+    try:
+        from .utils.cache import get_cached, set_cached
+        cache_key = f"news_sentiment:{symbol}"
+        
+        # Check cache first (ignore cache errors)
+        try:
+            cached = await get_cached(cache_key)
+            if cached:
+                return cached
+        except Exception as cache_err:
+            # Cache failed, continue without cache
+            print(f"⚠️ Cache read error (continuing): {cache_err}")
+    except ImportError:
+        # Cache not available, continue without it
+        pass
+    
     # ✅ Use correct async news fetcher
     articles = await get_news_for_ticker(symbol)
 
@@ -90,7 +139,7 @@ async def get_news(symbol: str):
     negative = len([s for s in scores if s <= -0.05])
     overall = "Positive" if avg >= 0.05 else "Negative" if avg <= -0.05 else "Neutral"
 
-    return {
+    result = {
         "success": True,
         "articles": analyzed,
         "sentiment_summary": {
@@ -101,6 +150,15 @@ async def get_news(symbol: str):
             "overall": overall,
         },
     }
+    
+    # Try to cache (ignore errors)
+    if cache_key:
+        try:
+            await set_cached(cache_key, result, expire=120)
+        except Exception:
+            pass  # Cache failed, but we still return the data
+    
+    return result
 
 
 # ---------------- BACKEND ROUTES REGISTRATION ----------------

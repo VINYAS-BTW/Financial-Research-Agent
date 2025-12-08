@@ -50,15 +50,12 @@ async def fetch_stock_data(symbol: str, time_period: str):
         if not (symbol.endswith(".NS") or symbol.endswith(".BO")):
             symbol = f"{symbol}.NS"
 
-        print(f"📊 Fetching data for {symbol} ({time_period})...")
-        
         # Note: yfinance only supports stocks available in Yahoo Finance database
         # Not all Indian stocks are available, especially:
         # - Delisted/suspended stocks
         # - Very small cap stocks
         # - Stocks with different ticker formats
 
-        # --- FETCH USING YFINANCE ASYNC THREAD ---
         def _download_stock():
             try:
                 result = yf.download(
@@ -66,7 +63,7 @@ async def fetch_stock_data(symbol: str, time_period: str):
                     period=time_period,
                     progress=False,
                     threads=False,
-                    timeout=10,
+                    timeout=8,  # Reduced from 10 to 8 for faster response
                     auto_adjust=False  # Explicitly set to avoid deprecation warning
                 )
                 # Check if result is empty or has no data
@@ -76,11 +73,9 @@ async def fetch_stock_data(symbol: str, time_period: str):
             except ValueError as e:
                 # Handle "No objects to concatenate" error
                 if "No objects to concatenate" in str(e):
-                    print(f"⚠️ No data available for {symbol}")
                     return pd.DataFrame()
                 raise
-            except Exception as e:
-                print(f"⚠️ Error downloading {symbol}: {str(e)}")
+            except Exception:
                 return pd.DataFrame()
         
         data = await asyncio.to_thread(_download_stock)
@@ -88,7 +83,6 @@ async def fetch_stock_data(symbol: str, time_period: str):
         # Fallback to BSE if NSE fails
         if (data.empty or data is None) and symbol.endswith(".NS"):
             alt_symbol = symbol.replace(".NS", ".BO")
-            print(f"⚠️ NSE failed, trying {alt_symbol}")
 
             def _download_alt():
                 try:
@@ -97,7 +91,7 @@ async def fetch_stock_data(symbol: str, time_period: str):
                         period=time_period,
                         progress=False,
                         threads=False,
-                        timeout=10,
+                        timeout=8,  # Reduced from 10 to 8 for faster response
                         auto_adjust=False
                     )
                     if result is None or (isinstance(result, pd.DataFrame) and result.empty):
@@ -105,11 +99,9 @@ async def fetch_stock_data(symbol: str, time_period: str):
                     return result
                 except ValueError as e:
                     if "No objects to concatenate" in str(e):
-                        print(f"⚠️ No data available for {alt_symbol}")
                         return pd.DataFrame()
                     raise
-                except Exception as e:
-                    print(f"⚠️ Error downloading {alt_symbol}: {str(e)}")
+                except Exception:
                     return pd.DataFrame()
             
             data = await asyncio.to_thread(_download_alt)
@@ -180,8 +172,6 @@ async def fetch_stock_data(symbol: str, time_period: str):
             "data_points": len(data),
             "period_return": round(period_return, 2)
         }
-
-        print(f"✅ Success for {symbol} ({len(data)} records)")
 
         return {
             "data": data.to_dict(orient="records"),

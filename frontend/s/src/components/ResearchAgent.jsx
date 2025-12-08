@@ -39,11 +39,7 @@ export default function ResearchAgent() {
     setLoading(true);
 
     try {
-      console.log("🚀 Calling unified agent with:", { ticker, query });
-      
       const res = await runUnifiedAgent(ticker, query);
-      
-      console.log(" Response:", res);
 
       if (res.success && res.data) {
         const data = res.data;
