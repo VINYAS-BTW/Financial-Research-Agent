@@ -251,12 +251,12 @@ function Dashboard() {
         
         .glass-card:hover {
           border-color: rgba(255,255,255,0.2);
-          box-shadow: 0 12px 48px 0 rgba(16,185,129,0.2);
-          transform: translateY(-1px);
+          box-shadow: 0 2px 1px 0 rgba(16,185,129,0.2);
+          transform: translateY(-0.1px);
         }
         
         .gradient-text {
-          background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #8b5cf6 100%);
+          background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #fff 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -281,7 +281,8 @@ function Dashboard() {
         }
         
         .icon-float:hover {
-          transform: translateY(-1px) scale(1.1);
+          transform: translateY(-0.1px) scale(1.01
+          );
         }
         
         .icon-float:active {
@@ -403,7 +404,7 @@ function Dashboard() {
 
       <div className="relative flex font-vi">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-0 h-screen w-20 glass-card flex flex-col items-center py-6 z-50">
+        <aside className="fixed left-0 top-0 h-screen w-20 glass-card flex flex-col items-center py-6 z-50 border-rb-8">
           {/* Logo */}
           <div className="mb-8 icon-float cursor-pointer">
             <div className="w-9 h-9 rounded-2xl  flex items-center justify-center  overflow-hidden">
@@ -426,7 +427,7 @@ function Dashboard() {
               onClick={() => setShowHistoryPanel(true)}
               className="w-12 h-12 rounded-3xl flex items-center justify-center text-gray-500 hover:text-white glass-card group icon-float"
             >
-              <BarChart3 className="w-5 h-5 relative z-10 group-hover:scale-110 transition-transform" />
+              <BarChart3 className="w-5 h-5 relative z-10 group-hover:scale-101 transition-transform" />
             </button>
 
             <button
@@ -676,7 +677,7 @@ function Dashboard() {
                   {/* Search with Dropdown */}
                   <div className="relative group" ref={searchInputRef}>
                     <Search
-                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-100 ${
                         isSearching
                           ? "text-emerald-400 animate-pulse"
                           : "text-gray-400"
@@ -758,7 +759,7 @@ function Dashboard() {
                       onChange={(e) => setSymbol1(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder="RELIANCE.NS"
-                      className="px-5 py-3 bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border-2 border-emerald-500/40 hover:border-emerald-500/70 focus:border-emerald-500 rounded-xl text-base font-medium text-white placeholder-gray-400 focus:outline-none backdrop-blur-xl w-40 input-glow transition-all shadow-lg shadow-emerald-500/20"
+                      className="px-5 py-3 bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 border-1 border-emerald-500/40 hover:border-emerald-500/70 focus:border-emerald-500 rounded-3xl text-base font-medium text-white placeholder-gray-400 focus:outline-none  w-40  transition-all shadow-sm shadow-emerald-500/20"
                     />
                     <input
                       type="text"
@@ -766,13 +767,13 @@ function Dashboard() {
                       onChange={(e) => setSymbol2(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder="TCS.NS"
-                      className="px-5 py-3 bg-gradient-to-r from-cyan-500/20 to-cyan-500/10 border-2 border-cyan-500/40 hover:border-cyan-500/70 focus:border-cyan-500 rounded-xl text-base font-medium text-white placeholder-gray-400 focus:outline-none backdrop-blur-xl w-40 input-glow transition-all shadow-lg shadow-cyan-500/20"
+                      className="px-5 py-3 bg-gradient-to-br from-cyan-500/20 to-cyan-500/10 border-1 border-cyan-500/40 hover:border-cyan-500/70 focus:border-cyan-500 rounded-3xl text-base font-medium text-white placeholder-gray-400 focus:outline-none  w-40  transition-all shadow-sm shadow-cyan-500/20"
                     />
                   </div>
                 </div>
 
                 {/* Center Tabs - Larger and more prominent */}
-                <div className="flex items-center space-x-2 glass-card rounded-2xl p-2 shadow-2xl border-2 border-white/20 bg-gradient-to-br from-white/10 to-white/5">
+                <div className="flex items-center space-x-2 glass-card rounded-full p-2 shadow-3xl bg-gradient-to-br from-white/10 to-white/5">
                   {[
                     { id: "technical", label: "Technical", icon: Activity },
                     { id: "news", label: "News Sentiment", icon: Newspaper },
@@ -789,7 +790,7 @@ function Dashboard() {
                         }`}
                       >
                         {isActive && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-600 to-cyan-600 rounded-xl shadow-lg shadow-emerald-500/50" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-cyan-600/7 rounded-full shadow-lg shadow-emerald-500/50" />
                         )}
                         <Icon className={`w-4 h-4 relative z-10 ${isActive ? "animate-bounce-subtle" : ""}`} />
                         <span className="relative z-10">{tab.label}</span>
@@ -803,7 +804,7 @@ function Dashboard() {
                   <select
                     value={period}
                     onChange={(e) => setPeriod(e.target.value)}
-                    className="px-5 py-3 glass-card rounded-xl text-base font-medium text-gray-200 focus:outline-none input-glow cursor-pointer hover:border-white/40 transition-all border-2 border-white/10 bg-gradient-to-br from-white/10 to-white/5 shadow-lg"
+                    className="px-5 py-3 glass-card rounded-2xl text-base font-medium text-gray-200 focus:outline-none input-glow cursor-pointer hover:border-white/40 transition-all border-2 border-white/10 bg-gradient-to-br from-white/10 to-white/5 shadow-lg"
                   >
                     <option value="1mo" className="bg-gray-900">
                       1 Month
@@ -822,7 +823,7 @@ function Dashboard() {
                   <button
                     onClick={() => handleFetch()}
                     disabled={isLoading}
-                    className="px-8 py-3 glass-card hover:bg-white/20 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-2 border-emerald-500/50 hover:border-emerald-400 rounded-xl text-base font-bold text-white transition-all disabled:opacity-50 relative overflow-hidden group shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 btn-glow"
+                    className="px-8 py-3 glass-card hover:bg-white/20 bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-2 border-emerald-500/50 hover:border-emerald-400 rounded-2xl text-base font-bold text-white transition-all disabled:opacity-50 relative overflow-hidden group shadow-sm shadow-emerald-500/30 hover:shadow-emerald-500/50 btn-glow"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <span className="relative z-10">{isLoading ? "Gettin' it..." : "Fetch Data"}</span>
