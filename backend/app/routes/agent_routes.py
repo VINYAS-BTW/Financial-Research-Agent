@@ -8,10 +8,7 @@ from pydantic import BaseModel
 from app.agents.graphs.unified_agent_graph import run_unified_analysis
 # LangGraph workflows
 from app.agents.graphs.research_graph import run_research_analysis
-from app.agents.graphs.sentiment_graph import (
-    run_sentiment_analysis,
-    analyze_ticker_sentiment,
-)
+from app.agents.graphs.sentiment_graph import run_sentiment_analysis
 from app.agents.graphs.portfolio_graph import run_portfolio_analysis
 
 # LLM node
@@ -41,6 +38,8 @@ class PortfolioRequest(BaseModel):
 class TickerSentimentRequest(BaseModel):
     ticker: str
     articles: List[dict]
+
+
 class UnifiedAnalysisRequest(BaseModel):
     ticker: str
     description: Optional[str] = None 
@@ -70,6 +69,8 @@ async def unified_agent(request: UnifiedAnalysisRequest):
             "message": "Unified analysis complete"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -96,8 +97,11 @@ async def get_unified_analysis(
             "data": result
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # ----------------------- Research Agent -----------------------
 @router.post("/research")
@@ -113,6 +117,8 @@ async def research_agent(request: ResearchRequest):
 
         return {"success": True, "data": result}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -134,28 +140,40 @@ async def sentiment_agent(request: SentimentRequest):
 
         return {"success": True, "data": result}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/sentiment/ticker")
 async def ticker_sentiment_agent(request: TickerSentimentRequest):
+    """
+    Analyze sentiment for a ticker's news articles
+    """
     try:
         if not request.articles:
             raise HTTPException(status_code=400, detail="No articles provided")
 
+        # Extract texts from articles
         texts = [
             (a.get("title", "") or "") + " " + (a.get("description", "") or "")
             for a in request.articles
         ]
 
+        # Run sentiment analysis
         result = await run_sentiment_analysis(texts=texts)
 
         if result.get("error"):
             raise HTTPException(status_code=500, detail=result["error"])
 
+        # Add ticker to result
+        result["ticker"] = request.ticker
+
         return {"success": True, "data": result}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -180,6 +198,8 @@ async def portfolio_agent(request: PortfolioRequest):
 
         return {"success": True, "data": result}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -201,6 +221,8 @@ async def get_research(
 
         return {"success": True, "data": result}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -227,6 +249,8 @@ async def get_portfolio_analysis(
 
         return {"success": True, "data": result}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

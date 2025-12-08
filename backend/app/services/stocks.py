@@ -4,8 +4,24 @@ import yfinance as yf
 import pandas as pd
 import re
 import asyncio
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple, Optional
 from app.config import settings
+
+"""
+Note on Indian Stock Support:
+- yfinance supports many Indian stocks but NOT all
+- Only stocks available in Yahoo Finance database can be fetched
+- Some stocks may be:
+  * Delisted or suspended
+  * Very small cap (not in Yahoo Finance)
+  * Using different ticker formats
+  * Not actively traded
+
+To verify if a stock exists:
+1. Check on Yahoo Finance: https://finance.yahoo.com/quote/SYMBOL.NS
+2. Check NSE website: https://www.nseindia.com/
+3. Check BSE website: https://www.bseindia.com/
+"""
 
 
 
@@ -13,47 +29,103 @@ async def fetch_stock_data(symbol: str, time_period: str):
     try:
         # --- INPUT SANITIZATION ---
         symbol = symbol.strip().upper()
-        symbol = re.sub(r'\.+', '.', symbol)
+        # Remove all non-alphanumeric except dots
         symbol = re.sub(r'[^A-Z0-9.]', '', symbol)
+        # Replace multiple consecutive dots with single dot
+        symbol = re.sub(r'\.+', '.', symbol)
+        # Remove leading/trailing dots
+        symbol = symbol.strip('.')
+        # Remove dots in the middle that don't make sense (like ETEA.N.NS -> ETEA.NS)
+        if '.' in symbol:
+            parts = symbol.split('.')
+            # Keep only the base symbol and the exchange suffix
+            if len(parts) > 2:
+                # If we have something like ETEA.N.NS, take first and last part
+                symbol = f"{parts[0]}.{parts[-1]}"
 
         if not symbol:
             return None, "Invalid symbol provided"
 
+        # Ensure proper exchange suffix
         if not (symbol.endswith(".NS") or symbol.endswith(".BO")):
             symbol = f"{symbol}.NS"
 
         print(f"📊 Fetching data for {symbol} ({time_period})...")
+        
+        # Note: yfinance only supports stocks available in Yahoo Finance database
+        # Not all Indian stocks are available, especially:
+        # - Delisted/suspended stocks
+        # - Very small cap stocks
+        # - Stocks with different ticker formats
 
         # --- FETCH USING YFINANCE ASYNC THREAD ---
         def _download_stock():
-            return yf.download(
-                symbol,
-                period=time_period,
-                progress=False,
-                threads=False,
-                timeout=10,
-                auto_adjust=False  # Explicitly set to avoid deprecation warning
-            )
-        data = await asyncio.to_thread(_download_stock)
-
-        # Fallback to BSE
-        if data.empty and symbol.endswith(".NS"):
-            alt_symbol = symbol.replace(".NS", ".BO")
-            print(f"⚠️ NSE failed, trying {alt_symbol}")
-
-            def _download_alt():
-                return yf.download(
-                    alt_symbol,
+            try:
+                result = yf.download(
+                    symbol,
                     period=time_period,
                     progress=False,
                     threads=False,
                     timeout=10,
                     auto_adjust=False  # Explicitly set to avoid deprecation warning
                 )
+                # Check if result is empty or has no data
+                if result is None or (isinstance(result, pd.DataFrame) and result.empty):
+                    return pd.DataFrame()
+                return result
+            except ValueError as e:
+                # Handle "No objects to concatenate" error
+                if "No objects to concatenate" in str(e):
+                    print(f"⚠️ No data available for {symbol}")
+                    return pd.DataFrame()
+                raise
+            except Exception as e:
+                print(f"⚠️ Error downloading {symbol}: {str(e)}")
+                return pd.DataFrame()
+        
+        data = await asyncio.to_thread(_download_stock)
+
+        # Fallback to BSE if NSE fails
+        if (data.empty or data is None) and symbol.endswith(".NS"):
+            alt_symbol = symbol.replace(".NS", ".BO")
+            print(f"⚠️ NSE failed, trying {alt_symbol}")
+
+            def _download_alt():
+                try:
+                    result = yf.download(
+                        alt_symbol,
+                        period=time_period,
+                        progress=False,
+                        threads=False,
+                        timeout=10,
+                        auto_adjust=False
+                    )
+                    if result is None or (isinstance(result, pd.DataFrame) and result.empty):
+                        return pd.DataFrame()
+                    return result
+                except ValueError as e:
+                    if "No objects to concatenate" in str(e):
+                        print(f"⚠️ No data available for {alt_symbol}")
+                        return pd.DataFrame()
+                    raise
+                except Exception as e:
+                    print(f"⚠️ Error downloading {alt_symbol}: {str(e)}")
+                    return pd.DataFrame()
+            
             data = await asyncio.to_thread(_download_alt)
 
-        if data.empty:
-            return None, f"No data found for {symbol.replace('.NS', '').replace('.BO', '')}"
+        # Final check for empty data
+        if data is None or (isinstance(data, pd.DataFrame) and data.empty):
+            clean_symbol = symbol.replace('.NS', '').replace('.BO', '')
+            exchange = "NSE" if symbol.endswith(".NS") else "BSE"
+            return None, (
+                f"Stock '{clean_symbol}' not found on {exchange}. "
+                f"This stock may be:\n"
+                f"- Delisted or suspended\n"
+                f"- Not available in Yahoo Finance database\n"
+                f"- Using a different ticker symbol\n"
+                f"Tip: Try searching for the stock on Yahoo Finance or NSE/BSE websites to find the correct ticker."
+            )
 
         # Flatten MultiIndex
         if isinstance(data.columns, pd.MultiIndex):
