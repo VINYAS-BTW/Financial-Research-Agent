@@ -449,8 +449,9 @@ const FinancialAILanding = () => {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold mb-2 font-vi3">Email Us</h3>
+                    <p className="text-gray-400 text-sm font-vi2">saiyam983@gmail.com</p>
                     <p className="text-gray-400 text-sm font-vi2">saivinyas18@gmail.com</p>
-                   
+                    <p className="text-gray-400 text-sm font-vi2">kattisourabh99@gmail.com</p>
                   </div>
                 </div>
               </div>
@@ -462,8 +463,9 @@ const FinancialAILanding = () => {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold mb-2 font-vi3">Call Us</h3>
+                    <p className="text-gray-400 text-sm font-vi2">+91 8660528056</p>
                     <p className="text-gray-400 text-sm font-vi2">+91 8884180205</p>
-                    <p className="text-gray-400 text-sm font-vi2">Any time at your service</p>
+                    <p className="text-gray-400 text-sm font-vi2">+91 8217260515</p>
                   </div>
                 </div>
               </div>
@@ -476,7 +478,7 @@ const FinancialAILanding = () => {
                   <div>
                     <h3 className="text-white font-semibold mb-2 font-vi3">Visit Us</h3>
                     <p className="text-gray-400 text-sm font-vi2">RVITM</p>
-                    <p className="text-gray-400 text-sm font-vi2">Bangalore,Karnataka</p>
+                    <p className="text-gray-400 text-sm font-vi2">Bangalore, Karnataka</p>
                   </div>
                 </div>
               </div>

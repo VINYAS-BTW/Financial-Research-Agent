@@ -156,9 +156,14 @@ function Dashboard() {
         }
         
         .input-glow:focus {
-          box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
-          border-color: rgba(16,185,129,0.6);
-          transform: scale(1.02);
+          box-shadow: 0 0 0 4px rgba(16,185,129,0.3), 0 0 20px rgba(16,185,129,0.4);
+          border-color: rgba(16,185,129,0.8);
+          transform: scale(1.03);
+        }
+        
+        .input-glow:hover:not(:focus) {
+          box-shadow: 0 0 15px rgba(16,185,129,0.2);
+          transform: scale(1.01);
         }
         
         .tab-item {
@@ -266,24 +271,27 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Sub Navigation */}
-            <div className="px-8 py-3 border-t border-white/10 border-b">
-              <div className="flex items-center justify-between">
-                {/* Stock Input Pills */}
-                <div className="flex items-center space-x-3">
+            {/* Sub Navigation - Enhanced Prominent Section */}
+            <div className="px-8 py-6 border-t border-white/10 border-b bg-gradient-to-b from-emerald-500/5 via-transparent to-transparent relative">
+              {/* Glow effect behind the section */}
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-cyan-500/5 to-transparent opacity-50 blur-xl pointer-events-none" />
+              
+              <div className="relative flex items-center justify-between gap-6">
+                {/* Stock Input Pills - Larger */}
+                <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500 font-medium font-vi">Your Stocks</span>
-                    <div className="w-1 h-1 bg-gray-700 rounded-full" />
+                    <span className="text-sm text-gray-400 font-semibold font-vi2">Your Stocks</span>
+                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-scale-pulse" />
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <input
                       type="text"
                       value={symbol1}
                       onChange={(e) => setSymbol1(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder="RELIANCE.NS"
-                      className="px-4 py-1.5 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 hover:border-emerald-500/50 focus:border-emerald-500/70 rounded-full text-sm text-white placeholder-gray-500 focus:outline-none backdrop-blur-xl w-32 input-glow transition-all"
+                      className="px-5 py-3 bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border-2 border-emerald-500/40 hover:border-emerald-500/70 focus:border-emerald-500 rounded-xl text-base font-medium text-white placeholder-gray-400 focus:outline-none backdrop-blur-xl w-40 input-glow transition-all shadow-lg shadow-emerald-500/20"
                     />
                     <input
                       type="text"
@@ -291,13 +299,13 @@ function Dashboard() {
                       onChange={(e) => setSymbol2(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder="TCS.NS"
-                      className="px-4 py-1.5 bg-gradient-to-r from-cyan-500/10 to-cyan-500/5 border border-cyan-500/30 hover:border-cyan-500/50 focus:border-cyan-500/70 rounded-full text-sm text-white placeholder-gray-500 focus:outline-none backdrop-blur-xl w-32 input-glow transition-all"
+                      className="px-5 py-3 bg-gradient-to-r from-cyan-500/20 to-cyan-500/10 border-2 border-cyan-500/40 hover:border-cyan-500/70 focus:border-cyan-500 rounded-xl text-base font-medium text-white placeholder-gray-400 focus:outline-none backdrop-blur-xl w-40 input-glow transition-all shadow-lg shadow-cyan-500/20"
                     />
                   </div>
                 </div>
 
-                {/* Center Tabs */}
-                <div className="flex items-center space-x-1 glass-card rounded-full p-1">
+                {/* Center Tabs - Larger and more prominent */}
+                <div className="flex items-center space-x-2 glass-card rounded-2xl p-2 shadow-2xl border-2 border-white/20 bg-gradient-to-br from-white/10 to-white/5">
                   {[
                     { id: "technical", label: "Technical", icon: Activity },
                     { id: "news", label: "News Sentiment", icon: Newspaper },
@@ -309,26 +317,26 @@ function Dashboard() {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`tab-item px-4 py-1.5 rounded-full text-sm font-medium transition-all relative overflow-hidden flex items-center gap-2 ${
-                          isActive ? "text-white" : "text-gray-400 hover:text-white"
+                        className={`tab-item px-6 py-3 rounded-xl text-base font-semibold transition-all relative overflow-hidden flex items-center gap-2 ${
+                          isActive ? "text-white scale-105" : "text-gray-400 hover:text-white"
                         }`}
                       >
                         {isActive && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-stone-900 rounded-full" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-600 to-cyan-600 rounded-xl shadow-lg shadow-emerald-500/50" />
                         )}
-                        <Icon className={`w-4 h-4 relative z-10 ${isActive ? "animate-bounce-subtle" : ""}`} />
-                        <span className="relative z-10">{tab.label}</span>
+                        <Icon className={`w-5 h-5 relative z-10 ${isActive ? "animate-bounce-subtle" : ""}`} />
+                        <span className="relative z-10 font-vi2">{tab.label}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Right: Period & Fetch */}
-                <div className="flex items-center space-x-3">
+                {/* Right: Period & Fetch - Larger */}
+                <div className="flex items-center space-x-4">
                   <select
                     value={period}
                     onChange={(e) => setPeriod(e.target.value)}
-                    className="px-4 py-1.5 glass-card rounded-full text-sm text-gray-300 focus:outline-none input-glow cursor-pointer hover:border-white/30 transition-all"
+                    className="px-5 py-3 glass-card rounded-xl text-base font-medium text-gray-200 focus:outline-none input-glow cursor-pointer hover:border-white/40 transition-all border-2 border-white/10 bg-gradient-to-br from-white/10 to-white/5 shadow-lg"
                   >
                     <option value="1mo" className="bg-gray-900">1 Month</option>
                     <option value="3mo" className="bg-gray-900">3 Months</option>
@@ -339,10 +347,10 @@ function Dashboard() {
                   <button
                     onClick={handleFetch}
                     disabled={isLoading}
-                    className="px-5 py-1.5 glass-card hover:bg-white/15  bg-gradient-to-br from-emerald-600 hover:border-white/50 rounded-full text-sm text-white font-medium transition-all disabled:opacity-50  relative overflow-hidden group"
+                    className="px-8 py-3 glass-card hover:bg-white/20 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-2 border-emerald-500/50 hover:border-emerald-400 rounded-xl text-base font-bold text-white transition-all disabled:opacity-50 relative overflow-hidden group shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 btn-glow"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative z-10">{isLoading ? "Gettin' it..." : "Fetch Data"}</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/30 to-cyan-400/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="relative z-10 font-vi2">{isLoading ? "Fetching..." : "Fetch Data"}</span>
                   </button>
                 </div>
               </div>
