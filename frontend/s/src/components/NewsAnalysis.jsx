@@ -11,12 +11,12 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   const [error2, setError2] = useState(null);
 
   useEffect(() => {
-    console.log("🔄 NewsAnalysis useEffect triggered", { symbol1, symbol2, trigger });
+    console.log(" NewsAnalysis useEffect triggered", { symbol1, symbol2, trigger });
     
     async function loadNews() {
       try {
         if (!symbol1) {
-          console.log("⚠️ No symbol1 provided");
+          console.log(" No symbol1 provided");
           return;
         }
 
@@ -283,7 +283,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8 rounded-4xl">
+    <div className="min-h-screen bg-gray-950 text-white p-8">
       <h2 className="text-3xl font-bold text-white mb-8">
         News & Sentiment Analysis
       </h2>

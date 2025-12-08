@@ -6,7 +6,7 @@ const API_BASE = "http://localhost:8000/api";
 
 const fetchStockData = async (symbol, period) => {
   try {
-    const response = await fetch(`${API_BASE}/stock-data?symbol=${symbol}&period=${period}`);
+    const response = await fetch(`${API_BASE}/stock-data?symbol=${encodeURIComponent(symbol)}&period=${period}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -16,11 +16,18 @@ const fetchStockData = async (symbol, period) => {
     
     console.log("📊 Stock API Response:", result);
 
-    if (result.success && Array.isArray(result.data)) {
+    // Check for error response from backend
+    if (!result.success) {
+      const errorMsg = result.error || "Failed to fetch stock data";
+      console.error("❌ Stock API Error:", errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    if (result.success && Array.isArray(result.data) && result.data.length > 0) {
       return result.data;
     } else {
-      console.warn("⚠️ Invalid stock API format or no data:", result);
-      return [];
+      console.warn("⚠️ No data available for:", symbol);
+      throw new Error(`No data available for ${symbol}`);
     }
   } catch (error) {
     console.error("❌ Stock API Error:", error.message);
@@ -48,26 +55,32 @@ function StockAnalysis({ symbol1, symbol2, period, trigger }) {
         setData1(d1);
       } catch (err) {
         console.error("❌ Error loading stock1:", err.message);
-        setError1("Failed to fetch data for " + symbol1);
+        setError1(err.message || `Failed to fetch data for ${symbol1}`);
+        setData1(null);
       } finally {
         setLoading1(false);
       }
 
-      // Load stock 2 (if provided)
-      if (symbol2 && symbol2 !== symbol1) {
+      // Load stock 2 (if provided) - with a small delay to avoid rate limiting
+      if (symbol2 && symbol2.trim() && symbol2 !== symbol1) {
         try {
+          // Small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
           setLoading2(true);
           setError2(null);
           const d2 = await fetchStockData(symbol2, period);
           setData2(d2);
         } catch (err) {
           console.error("❌ Error loading stock2:", err.message);
-          setError2("Failed to fetch data for " + symbol2);
+          setError2(err.message || `Failed to fetch data for ${symbol2}`);
+          setData2(null);
         } finally {
           setLoading2(false);
         }
       } else {
         setData2(null);
+        setError2(null);
       }
     }
 

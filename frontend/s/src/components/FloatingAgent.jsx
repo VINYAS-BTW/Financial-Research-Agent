@@ -83,19 +83,19 @@ export default function FloatingAgent() {
       {/* Floating Chat Button */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 bg-cyan-600 hover:bg-cyan-500 text-white p-4 rounded-full shadow-lg shadow-cyan-500/40 transition-all border border-cyan-300 hover:scale-110 z-[2000] cursor-pointer"
+        className="fixed bottom-6 right-6 bg-emerald-500 hover:bg-lime-500 text-white p-4 rounded-full shadow-lg shadow-emerald-500/40 transition-all  hover:scale-101 z-[2000] cursor-pointer"
       >
         AGENT
       </button>
 
       {/* Chat Panel */}
       <div
-        className={`fixed bottom-20 right-6 w-80 h-[420px] bg-neutral-900/90 backdrop-blur-xl rounded-2xl border border-cyan-600/40 shadow-2xl shadow-cyan-900/40 overflow-hidden transition-all z-[2000]
+        className={`fixed bottom-20 right-6 w-80 h-[420px] bg-neutral-900/90 backdrop-blur-xl rounded-2xl border border-emerald-600/40 shadow-2xl shadow-emerald-900/40 overflow-hidden transition-all z-[2000]
         ${open ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"}`}
       >
         {/* Header */}
-        <div className="p-3 bg-neutral-950/60 border-b border-cyan-800/40 flex justify-between items-center">
-          <span className="font-semibold text-cyan-200">AI Research Agent</span>
+        <div className="p-3 bg-neutral-950/60 border-b border-emerald-800/40 flex justify-between items-center">
+          <span className="font-semibold text-emerald-200">AI Research Agent</span>
           <button
             onClick={() => setOpen(false)}
             className="text-gray-400 hover:text-white cursor-pointer"
@@ -111,24 +111,24 @@ export default function FloatingAgent() {
           ))}
 
           {isThinking && (
-            <div className="text-cyan-300 text-sm animate-pulse">Thinking...</div>
+            <div className="text-emerald-300 text-sm animate-pulse">Thinking...</div>
           )}
 
           <div ref={scrollRef} />
         </div>
 
         {/* Input */}
-        <div className="p-2 border-t border-cyan-800/40 bg-neutral-950/50 flex gap-2">
+        <div className="p-2 border-t border-emerald-800/40 bg-neutral-950/50 flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Ask something..."
-            className="flex-1 bg-neutral-800 text-white px-3 py-2 rounded-xl border border-cyan-700/30 focus:outline-none"
+            className="flex-1 bg-neutral-800 text-white px-3 py-2 rounded-xl border border-emerald-700/30 focus:outline-none"
           />
           <button
             onClick={sendMessage}
-            className="px-3 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-xl transition"
+            className="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition"
           >
             ➤
           </button>
@@ -144,7 +144,7 @@ function MessageBubble({ type, content }) {
   if (type === "user") {
     return (
       <div className="flex justify-end">
-        <div className={`${base} bg-cyan-700 text-white`}>{content}</div>
+        <div className={`${base} bg-emerald-700 text-white`}>{content}</div>
       </div>
     );
   }
@@ -152,7 +152,7 @@ function MessageBubble({ type, content }) {
   if (type === "agent") {
     return (
       <div className="flex justify-start">
-        <div className={`${base} bg-neutral-800 border border-cyan-700`}>
+        <div className={`${base} bg-neutral-800 border border-emerald-700`}>
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
       </div>
