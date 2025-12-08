@@ -284,7 +284,7 @@ function NewsAnalysis({ symbol1 = "AAPL", symbol2 = "", trigger = 0 }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <div className="min-h-screen bg-black/20 text-white p-8 rounded-2xl">
       <h2 className="text-3xl font-bold text-white mb-8">
         News & Sentiment Analysis
       </h2>

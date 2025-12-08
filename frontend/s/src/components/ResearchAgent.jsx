@@ -129,14 +129,14 @@ export default function ResearchAgent() {
       {/* INPUT FIELDS */}
       <div className="flex flex-col gap-3 mb-6">
         <input
-          className="bg-[#111] border border-gray-800 rounded-3xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-100 "
+          className="bg-[#111] border border-gray-800 rounded-3xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-700 "
           placeholder="Enter ticker e.g. RELIANCE.NS (or multiple: RELIANCE.NS TCS.NS)"
           value={ticker}
           onChange={(e) => setTicker(e.target.value)}
         />
 
         <input
-          className="bg-[#111] border border-gray-700 rounded-3xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-100"
+          className="bg-[#111] border border-gray-700 rounded-3xl px-4 py-4 text-white focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-700"
           placeholder='Ask your research question... (e.g. "which is better to buy")'
           value={query}
           onKeyDown={(e) => e.key === "Enter" && runAgent()}
