@@ -1,4 +1,4 @@
-# 📊 Financial Research AI Agent (Track A – Essential)
+# 📊 Financial Research AI Agent
 
 An **AI-powered financial research assistant** that analyzes **Indian stock market data** and visualizes key trends through interactive charts and technical indicators.  
 This project is part of the **8-Week Financial Research AI Agent Development Program** focused on practical fintech data analysis and AI integration.
