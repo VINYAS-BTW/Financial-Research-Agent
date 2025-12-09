@@ -15,6 +15,9 @@ import {
 import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import teamMember1Img from "../assets/team-member-1.png";
+import teamMember2Img from "../assets/team-member-2.png";
+import teamMember3Img from "../assets/team-member-3.jpg";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,28 +33,33 @@ const FinancialAILanding = () => {
   const scrollContainerRef = useRef(null);
   const progressBarRef = useRef(null);
 
+  // Debug: Log image imports on mount
+  useEffect(() => {
+    console.log("=== IMAGE DEBUG INFO ===");
+    console.log("teamMember1Img:", teamMember1Img, "Type:", typeof teamMember1Img);
+    console.log("teamMember2Img:", teamMember2Img, "Type:", typeof teamMember2Img);
+    console.log("teamMember3Img:", teamMember3Img, "Type:", typeof teamMember3Img);
+  }, []);
+
   const teamMembers = [
     {
       name: "Saiyam N Bothra",
       role: "Team Lead and Ai Engineer",
-      image:
-        "",
+      image: teamMember1Img,
       bio: "STILL THINKIN",
       social: { linkedin: "https:/linkedin.com/in/saiyamnbothra", github: "https://github.com/SaiyamJn" },
     },
     {
       name: "Sai Vinyas BS",
       role: "Frontend Lead and Backend Support",
-      image:
-        "",
+      image: teamMember2Img,
         bio:"Caffeine hits Harder",
       social: { linkedin: "https:/linkedin.com/in/sai-vinyas-bs-864510296", github: "https://github.com/VINYAS-BTW" },
     },
     {
       name: "Sourabh V Katti",
       role: "Backend Lead and Frontend Support",
-      image:
-        "",
+      image: teamMember3Img,
       bio: "Faster than Vande Bharat",
       social: { linkedin: "https:/linkedin.com/in/sourabh-katti-627374303", github: "https://github.com/sou9916" },
     },
@@ -530,11 +538,30 @@ const FinancialAILanding = () => {
                     {/* Image with animated border */}
                     <div className="relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative w-40 h-40 rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500">
+                      <div className="relative w-40 h-40 rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-emerald-500/50 transition-all duration-500 bg-white/5">
                         <img
                           src={member.image}
                           alt={member.name}
                           className="w-full h-full object-cover transform group-hover:scale-101 transition-transform duration-700"
+                          style={{ 
+                            display: 'block', 
+                            width: '100%', 
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            console.error("❌ Image failed to load for", member.name);
+                            console.error("Image src value:", member.image);
+                            console.error("Image src type:", typeof member.image);
+                            console.error("Error event:", e);
+                            e.target.style.backgroundColor = '#374151';
+                            e.target.style.display = 'none';
+                          }}
+                          onLoad={(e) => {
+                            console.log("✅ Image loaded successfully:", member.name);
+                            console.log("Image src:", member.image);
+                            console.log("Image dimensions:", e.target.naturalWidth, "x", e.target.naturalHeight);
+                          }}
                         />
                       </div>
                     </div>
