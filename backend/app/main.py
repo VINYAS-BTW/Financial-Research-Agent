@@ -168,11 +168,14 @@ app.include_router(watchlist_routes.router, prefix="/api")
 app.include_router(agent_routes.router, prefix="/api")  # AI Agent routes
 
 
-# ---------------- STARTUP & SHUTDOWN ----------------
+# ---------------- STARTUP & SHUTDOWN ---------------- 
 @app.on_event("startup")
 async def startup_event():
-    await init_db()
-    print("✅ MongoDB connection initialized")
+    db_instance = await init_db()
+    if db_instance:
+        print("✅ MongoDB connection initialized")
+    else:
+        print("⚠️ MongoDB not available - app running without database features")
 
 
 @app.on_event("shutdown")

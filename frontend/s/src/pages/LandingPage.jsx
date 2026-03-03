@@ -757,13 +757,13 @@ const FinancialAILanding = () => {
                       Call Us
                     </h3>
                     <p className="text-gray-400 text-sm font-vi2">
-                      +91 xxx xxx xxxx
+                      +91 8660528056
                     </p>
                     <p className="text-gray-400 text-sm font-vi2">
-                      +91 xxx xxx xxxx
+                      +91 8884180205
                     </p>
                     <p className="text-gray-400 text-sm font-vi2">
-                      +91 xxx xxx xxxx
+                      +91 8217260515
                     </p>
                   </div>
                 </div>

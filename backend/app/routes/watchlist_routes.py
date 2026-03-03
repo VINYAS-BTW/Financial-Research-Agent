@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
-from ..db import get_db
+from ..db import get_db, is_db_connected
 from datetime import datetime
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
@@ -13,6 +13,12 @@ def normalize_symbol(s: str) -> str:
 # 🔹 Fetch user's watchlist
 @router.get("/{user_id}")
 async def get_watchlist(user_id: str, db=Depends(get_db)):
+    if not is_db_connected() or db is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Database not available. Please configure MongoDB connection."
+        )
+    
     collection = db["watchlist"]
     doc = await collection.find_one({"user_id": user_id})
 
@@ -42,6 +48,12 @@ async def get_watchlist(user_id: str, db=Depends(get_db)):
 # 🔹 Add symbol to user's watchlist
 @router.post("/{user_id}/add")
 async def add_item(user_id: str, request: Request, db=Depends(get_db)):
+    if not is_db_connected() or db is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Database not available. Please configure MongoDB connection."
+        )
+    
     data = await request.json()
     symbol = normalize_symbol(data.get("symbol"))
 
@@ -75,6 +87,12 @@ async def add_item(user_id: str, request: Request, db=Depends(get_db)):
 # 🔹 Remove symbol from watchlist
 @router.post("/{user_id}/remove")
 async def remove_item(user_id: str, request: Request, db=Depends(get_db)):
+    if not is_db_connected() or db is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Database not available. Please configure MongoDB connection."
+        )
+    
     data = await request.json()
     symbol = normalize_symbol(data.get("symbol"))
 
